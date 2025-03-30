@@ -26,13 +26,55 @@ fn cleanup_temp_file(file_path: &PathBuf) {
 }
 
 #[test]
-fn test_arithmetic_operations() {
-    let temp_file = create_temp_file("test_arithmetic.fth", "25 10 + 3 * CR .");
+fn test_addition() {
+    let temp_file = create_temp_file("test_addition.fth", "25 10 + CR .");
     let output = run_binary_with_file(&temp_file);
 
     assert!(
-        output.contains("\n105"),
-        "La salida no contiene el resultado esperado: {}",
+        output.contains("\n35"),
+        "La salida no contiene el resultado esperado para la suma: {}",
+        output
+    );
+
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_subtraction() {
+    let temp_file = create_temp_file("test_subtraction.fth", "25 10 - CR .");
+    let output = run_binary_with_file(&temp_file);
+
+    assert!(
+        output.contains("\n15"),
+        "La salida no contiene el resultado esperado para la resta: {}",
+        output
+    );
+
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_multiplication() {
+    let temp_file = create_temp_file("test_multiplication.fth", "25 10 * CR .");
+    let output = run_binary_with_file(&temp_file);
+
+    assert!(
+        output.contains("\n250"),
+        "La salida no contiene el resultado esperado para la multiplicación: {}",
+        output
+    );
+
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_division() {
+    let temp_file = create_temp_file("test_division.fth", "25 10 / CR .");
+    let output = run_binary_with_file(&temp_file);
+
+    assert!(
+        output.contains("\n2"),
+        "La salida no contiene el resultado esperado para la división: {}",
         output
     );
 
