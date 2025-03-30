@@ -29,14 +29,74 @@ fn main() {
 }
 
 fn execute_tokens(stack: &mut Stack, tokens: Vec<Token>) -> Result<(), String> {
-    for token in tokens {
-        match token {
-            Token::Number(n) => stack.push(n).map_err(|e| e.to_string())?,
-            Token::Word(word) => handle_word(stack, &word)?,
-            Token::StringLiteral(s) => print!("{}", s),
+    let mut i = 0;
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::Number(n) => {
+                stack.push(*n)?;
+                i += 1;
+            }
+            Token::StringLiteral(s) => {
+                print!("{}", s);
+                i += 1;
+            }
+            Token::Word(word) => {
+                match word.to_uppercase().as_str() {
+                    "IF" => {
+                        // Se delega la ejecución del condicional y se actualiza el índice.
+                        i = execute_conditional(stack, &tokens, i)?;
+                    }
+                    _ => {
+                        // Para el resto, se usa el handler habitual.
+                        handle_word(stack, word)?;
+                        i += 1;
+                    }
+                }
+            }
         }
     }
     Ok(())
+}
+
+fn execute_conditional(stack: &mut Stack, tokens: &[Token], if_index: usize) -> Result<usize, String> {
+    // Se asume que tokens[if_index] es "IF". Primero se poppea la condición.
+    let cond = stack.pop()?;
+    let condition_true = cond != 0;
+
+    // Buscamos las posiciones de ELSE (opcional) y de THEN (obligatorio)
+    let mut else_index: Option<usize> = None;
+    let mut then_index: Option<usize> = None;
+    let mut j = if_index + 1;
+    while j < tokens.len() {
+        if let Token::Word(ref w) = tokens[j] {
+            let w_upper = w.to_uppercase();
+            if w_upper == "THEN" {
+                then_index = Some(j);
+                break;
+            } else if w_upper == "ELSE" {
+                else_index = Some(j);
+            }
+        }
+        j += 1;
+    }
+
+    if then_index.is_none() {
+        return Err("Estructura IF sin THEN".to_string());
+    }
+    let then_idx = then_index.unwrap();
+
+    if condition_true {
+        // Si la condición es verdadera, ejecutamos los tokens entre IF y ELSE (o IF y THEN si no hay ELSE)
+        let end = else_index.unwrap_or(then_idx);
+        let branch_tokens = tokens[if_index + 1..end].to_vec();
+        execute_tokens(stack, branch_tokens)?;
+    } else if let Some(else_idx) = else_index {
+        // Si la condición es falsa y hay ELSE, ejecutamos el bloque de ELSE.
+        let branch_tokens = tokens[else_idx + 1..then_idx].to_vec();
+        execute_tokens(stack, branch_tokens)?;
+    }
+    // Se retorna el índice posterior a THEN para continuar la ejecución.
+    Ok(then_idx + 1)
 }
 
 fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
@@ -71,7 +131,6 @@ fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
             stack.push(c).map_err(|e| e.to_string())?;
             stack.push(a).map_err(|e| e.to_string())
         }
-        //TODO: Ver bien!!
         "=" => apply_binary_op(stack, |a, b| if a == b { -1 } else { 0 }),
         "<" => apply_binary_op(stack, |a, b| if a < b { -1 } else { 0 }),
         ">" => apply_binary_op(stack, |a, b| if a > b { -1 } else { 0 }),

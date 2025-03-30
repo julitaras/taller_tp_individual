@@ -87,3 +87,45 @@ fn test_boolean_operations() {
 
     cleanup_temp_file(&temp_file);
 }
+
+#[test]
+fn test_if_then() {
+    // Condición verdadera: 1 IF 42 . THEN CR  => se debe imprimir "42"
+    let temp_file = create_temp_file("test_if_then.fth", "1 IF 42 . THEN CR");
+    let output = run_binary_with_file(&temp_file);
+    
+    let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
+    let expected_lines = vec!["42"];
+    assert_eq!(output_lines, expected_lines, "Salida: {:?}", output_lines);
+    
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_if_else_then() {
+    // Condición falsa: 0 IF 42 . ELSE 99 . THEN CR  => se debe imprimir "99"
+    let temp_file = create_temp_file("test_if_else_then.fth", "0 IF 42 . ELSE 99 . THEN CR");
+    let output = run_binary_with_file(&temp_file);
+    
+    let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
+    let expected_lines = vec!["99"];
+    assert_eq!(output_lines, expected_lines, "Salida: {:?}", output_lines);
+    
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_if_then_without_else() {
+    // Condición falsa y sin ELSE: 0 IF 42 . THEN CR  => no se debe imprimir nada
+    let temp_file = create_temp_file("test_if_then_false.fth", "0 IF 42 . THEN CR");
+    let output = run_binary_with_file(&temp_file);
+    
+    let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
+    assert!(
+        output_lines.is_empty(),
+        "Se esperaba salida vacía, pero se obtuvo: {:?}",
+        output_lines
+    );
+    
+    cleanup_temp_file(&temp_file);
+}
