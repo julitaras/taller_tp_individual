@@ -160,7 +160,10 @@ fn test_dup() {
     let temp_file = create_temp_file("test_dup.fth", "42 DUP . CR");
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["42"];
 
     assert_eq!(
@@ -177,7 +180,10 @@ fn test_drop() {
     let temp_file = create_temp_file("test_drop.fth", "42 10 DROP . CR");
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["42"];
 
     assert_eq!(
@@ -194,7 +200,10 @@ fn test_swap() {
     let temp_file = create_temp_file("test_swap.fth", "1 2 SWAP . CR");
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["1"];
 
     assert_eq!(
@@ -211,7 +220,10 @@ fn test_over() {
     let temp_file = create_temp_file("test_over.fth", "10 20 OVER . CR");
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["10"];
 
     assert_eq!(
@@ -228,7 +240,10 @@ fn test_rot() {
     let temp_file = create_temp_file("test_rot.fth", "1 2 3 ROT . CR");
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["1"];
 
     assert_eq!(
@@ -245,7 +260,10 @@ fn test_equal() {
     let temp_file = create_temp_file("test_equal.fth", "5 5 = . CR\n5 6 = . CR");
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["-1", "0"];
 
     assert_eq!(
@@ -262,7 +280,10 @@ fn test_less_than() {
     let temp_file = create_temp_file("test_less_than.fth", "4 5 < . CR\n5 4 < . CR");
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["-1", "0"];
 
     assert_eq!(
@@ -279,7 +300,10 @@ fn test_greater_than() {
     let temp_file = create_temp_file("test_greater_than.fth", "5 4 > . CR\n4 5 > . CR");
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["-1", "0"];
 
     assert_eq!(
@@ -293,10 +317,16 @@ fn test_greater_than() {
 
 #[test]
 fn test_and() {
-    let temp_file = create_temp_file("test_and.fth", "-1 -1 AND . CR\n-1 0 AND . CR\n0 0 AND . CR");
+    let temp_file = create_temp_file(
+        "test_and.fth",
+        "-1 -1 AND . CR\n-1 0 AND . CR\n0 0 AND . CR",
+    );
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["-1", "0", "0"];
 
     assert_eq!(
@@ -313,7 +343,10 @@ fn test_or() {
     let temp_file = create_temp_file("test_or.fth", "0 -1 OR . CR\n0 0 OR . CR");
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["-1", "0"];
 
     assert_eq!(
@@ -330,7 +363,10 @@ fn test_not() {
     let temp_file = create_temp_file("test_not.fth", "0 NOT . CR\n5 NOT . CR");
     let output = run_binary_with_file(&temp_file);
 
-    let output_lines: Vec<&str> = output.lines().filter(|line| !line.trim().is_empty()).collect();
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     let expected_lines = vec!["-1", "0"];
 
     assert_eq!(
@@ -346,11 +382,11 @@ fn test_not() {
 fn test_if_then() {
     let temp_file = create_temp_file("test_if_then.fth", "1 IF 42 . THEN CR");
     let output = run_binary_with_file(&temp_file);
-    
+
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
     let expected_lines = vec!["42"];
     assert_eq!(output_lines, expected_lines, "Salida: {:?}", output_lines);
-    
+
     cleanup_temp_file(&temp_file);
 }
 
@@ -358,11 +394,11 @@ fn test_if_then() {
 fn test_if_else_then() {
     let temp_file = create_temp_file("test_if_else_then.fth", "0 IF 42 . ELSE 99 . THEN CR");
     let output = run_binary_with_file(&temp_file);
-    
+
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
     let expected_lines = vec!["99"];
     assert_eq!(output_lines, expected_lines, "Salida: {:?}", output_lines);
-    
+
     cleanup_temp_file(&temp_file);
 }
 
@@ -370,13 +406,13 @@ fn test_if_else_then() {
 fn test_if_then_without_else() {
     let temp_file = create_temp_file("test_if_then_false.fth", "0 IF 42 . THEN CR");
     let output = run_binary_with_file(&temp_file);
-    
+
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
     assert!(
         output_lines.is_empty(),
         "Se esperaba salida vacía, pero se obtuvo: {:?}",
         output_lines
     );
-    
+
     cleanup_temp_file(&temp_file);
 }

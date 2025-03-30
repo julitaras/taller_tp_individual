@@ -1,10 +1,10 @@
-mod stack;
 mod parser;
+mod stack;
 
+use parser::{Token, tokenize};
+use stack::Stack;
 use std::env;
 use std::fs;
-use stack::Stack;
-use parser::{Token, tokenize};
 
 fn main() {
     let (filename, stack_size) = parse_args();
@@ -29,7 +29,10 @@ fn parse_args() -> (String, usize) {
         std::process::exit(1);
     }
     let filename = args[1].clone();
-    let stack_size = args.get(2).and_then(|s| s.parse::<usize>().ok()).unwrap_or(1024);
+    let stack_size = args
+        .get(2)
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(1024);
     (filename, stack_size)
 }
 
@@ -49,23 +52,25 @@ fn execute_tokens(stack: &mut Stack, tokens: Vec<Token>) -> Result<(), String> {
                 print!("{}", s);
                 i += 1;
             }
-            Token::Word(word) => {
-                match word.to_uppercase().as_str() {
-                    "IF" => {
-                        i = execute_conditional(stack, &tokens, i)?;
-                    }
-                    _ => {
-                        handle_word(stack, word)?;
-                        i += 1;
-                    }
+            Token::Word(word) => match word.to_uppercase().as_str() {
+                "IF" => {
+                    i = execute_conditional(stack, &tokens, i)?;
                 }
-            }
+                _ => {
+                    handle_word(stack, word)?;
+                    i += 1;
+                }
+            },
         }
     }
     Ok(())
 }
 
-fn execute_conditional(stack: &mut Stack, tokens: &[Token], if_index: usize) -> Result<usize, String> {
+fn execute_conditional(
+    stack: &mut Stack,
+    tokens: &[Token],
+    if_index: usize,
+) -> Result<usize, String> {
     let (else_index, then_index) = find_else_then_indices(tokens, if_index)?;
 
     let cond = stack.pop()?;
@@ -83,7 +88,10 @@ fn execute_conditional(stack: &mut Stack, tokens: &[Token], if_index: usize) -> 
     Ok(then_idx + 1)
 }
 
-fn find_else_then_indices(tokens: &[Token], if_index: usize) -> Result<(Option<usize>, Option<usize>), String> {
+fn find_else_then_indices(
+    tokens: &[Token],
+    if_index: usize,
+) -> Result<(Option<usize>, Option<usize>), String> {
     let mut else_index: Option<usize> = None;
     let mut then_index: Option<usize> = None;
     let mut j = if_index + 1;
@@ -143,7 +151,7 @@ fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
         "<" => apply_binary_op(stack, |a, b| if a < b { -1 } else { 0 }),
         ">" => apply_binary_op(stack, |a, b| if a > b { -1 } else { 0 }),
         "AND" => apply_binary_op(stack, |a, b| if a != 0 && b != 0 { -1 } else { 0 }),
-        "OR"  => apply_binary_op(stack, |a, b| if a != 0 || b != 0 { -1 } else { 0 }),
+        "OR" => apply_binary_op(stack, |a, b| if a != 0 || b != 0 { -1 } else { 0 }),
         "NOT" => {
             let a = stack.pop()?;
             let result = if a == 0 { -1 } else { 0 };
@@ -182,7 +190,10 @@ fn save_stack_to_file(stack: &Stack, filename: &str) -> Result<(), String> {
     let stack_vec = stack.to_vec();
     fs::write(
         filename,
-        stack_vec.iter().map(|n| n.to_string() + "\n").collect::<String>(),
+        stack_vec
+            .iter()
+            .map(|n| n.to_string() + "\n")
+            .collect::<String>(),
     )
     .map_err(|e| e.to_string())
 }
