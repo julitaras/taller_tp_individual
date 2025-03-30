@@ -1,9 +1,9 @@
 mod parser;
 mod stack;
 
-use std::collections::HashMap;
 use parser::{Token, tokenize};
 use stack::Stack;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 
@@ -16,7 +16,8 @@ fn main() {
     let mut dictionary: HashMap<String, Vec<Token>> = HashMap::new();
 
     if let Err(e) = execute_tokens(&mut stack, tokens, &mut dictionary) {
-        eprintln!("Error durante la ejecución: {}", e);
+        print!("{}", e);
+        std::process::exit(1);
     }
 
     if let Err(e) = save_stack_to_file(&stack, "stack.fth") {
@@ -133,7 +134,6 @@ fn handle_definition(
     Ok(i)
 }
 
-
 fn execute_conditional(
     stack: &mut Stack,
     tokens: &[Token],
@@ -189,7 +189,14 @@ fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
         "+" => apply_binary_op(stack, |a, b| a + b),
         "-" => apply_binary_op(stack, |a, b| a - b),
         "*" => apply_binary_op(stack, |a, b| a * b),
-        "/" => apply_binary_op(stack, |a, b| a / b),
+        "/" => {
+            let b = stack.pop()?;
+            if b == 0 {
+                return Err("division-by-zero".to_string());
+            }
+            let a = stack.pop()?;
+            stack.push(a / b)
+        }
         "DUP" => {
             let val = stack.peek().map_err(|e| e.to_string())?;
             stack.push(val).map_err(|e| e.to_string())

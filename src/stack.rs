@@ -24,7 +24,6 @@ impl Stack {
         self.data.pop().ok_or_else(|| "stack-underflow".to_string())
     }
 
-    // Método para ver el elemento superior sin removerlo.
     pub fn peek(&self) -> Result<i16, String> {
         self.data
             .last()
@@ -32,7 +31,6 @@ impl Stack {
             .ok_or_else(|| "stack-underflow".to_string())
     }
 
-    // Método para ver el n-ésimo elemento desde la parte superior (0: top, 1: el siguiente, etc.)
     pub fn peek_n(&self, n: usize) -> Result<i16, String> {
         if self.data.len() > n {
             Ok(self.data[self.data.len() - 1 - n])

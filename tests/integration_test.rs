@@ -21,6 +21,17 @@ fn run_binary_with_file(file_path: &PathBuf) -> String {
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
+fn run_binary_with_file_args(file_path: &PathBuf, extra_args: &[&str]) -> String {
+    let bin_path = env!("CARGO_BIN_EXE_taller_tp_individual");
+    let mut cmd = Command::new(bin_path);
+    cmd.arg(file_path);
+    for arg in extra_args {
+        cmd.arg(arg);
+    }
+    let output = cmd.output().expect("Fallo al ejecutar el comando");
+    String::from_utf8_lossy(&output.stdout).to_string()
+}
+
 fn cleanup_temp_file(file_path: &PathBuf) {
     remove_file(file_path).expect("No se pudo borrar el archivo temporal");
 }
@@ -442,24 +453,52 @@ fn test_word_definition() {
     cleanup_temp_file(&temp_file);
 }
 
-// #[test]
-// fn test_word_not_defined_return_err() {
-//     let code = r#"FOO"#;
-//     let temp_file = create_temp_file("test_definition.fth", code);
-//     let output = run_binary_with_file(&temp_file);
+#[test]
+fn test_undefined_word() {
+    let code = "FOO";
+    let temp_file = create_temp_file("test_undefined_word.fth", code);
+    let output = run_binary_with_file(&temp_file);
+    let expected = "?";
+    assert_eq!(output.trim(), expected, "Salida: {:?}", output);
+    cleanup_temp_file(&temp_file);
+}
 
-//     let output_lines: Vec<String> = output
-//         .lines()
-//         .filter(|l| !l.trim().is_empty())
-//         .map(|l| l.trim().to_string())
-//         .collect();
-//     let expected_lines = vec!["?".to_string()];
+#[test]
+fn test_division_by_zero() {
+    let code = "10 0 /";
+    let temp_file = create_temp_file("test_division_by_zero.fth", code);
+    let output = run_binary_with_file(&temp_file);
+    let expected = "division-by-zero";
+    assert_eq!(output.trim(), expected, "Salida: {:?}", output);
+    cleanup_temp_file(&temp_file);
+}
 
-//     assert_eq!(
-//         output_lines, expected_lines,
-//         "La salida no coincide con lo esperado para la definición: {:?}",
-//         output_lines
-//     );
+#[test]
+fn test_stack_underflow() {
+    let code = "DROP";
+    let temp_file = create_temp_file("test_stack_underflow.fth", code);
+    let output = run_binary_with_file(&temp_file);
+    let expected = "stack-underflow";
+    assert_eq!(output.trim(), expected, "Salida: {:?}", output);
+    cleanup_temp_file(&temp_file);
+}
 
-//     cleanup_temp_file(&temp_file);
-// }
+#[test]
+fn test_stack_overflow() {
+    let code = "1 2 3";
+    let temp_file = create_temp_file("test_stack_overflow.fth", code);
+    let output = run_binary_with_file_args(&temp_file, &["2"]); // Pasa "2" como stack_size
+    let expected = "stack-overflow";
+    assert_eq!(output.trim(), expected, "Salida: {:?}", output);
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_invalid_word_definition() {
+    let code = ": 4 1 ;";
+    let temp_file = create_temp_file("test_invalid_word_definition.fth", code);
+    let output = run_binary_with_file(&temp_file);
+    let expected = "invalid-word";
+    assert_eq!(output.trim(), expected, "Salida: {:?}", output);
+    cleanup_temp_file(&temp_file);
+}
