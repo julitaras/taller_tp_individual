@@ -1,6 +1,7 @@
 mod parser;
 mod stack;
 
+use std::collections::HashMap;
 use parser::{Token, tokenize};
 use stack::Stack;
 use std::env;
@@ -12,8 +13,9 @@ fn main() {
     let tokens = tokenize(&code);
 
     let mut stack = Stack::new(stack_size);
+    let mut dictionary: HashMap<String, Vec<Token>> = HashMap::new();
 
-    if let Err(e) = execute_tokens(&mut stack, tokens) {
+    if let Err(e) = execute_tokens(&mut stack, tokens, &mut dictionary) {
         eprintln!("Error durante la ejecución: {}", e);
     }
 
@@ -40,36 +42,103 @@ fn read_file(filename: &str) -> String {
     fs::read_to_string(filename).expect("No se pudo leer el archivo")
 }
 
-fn execute_tokens(stack: &mut Stack, tokens: Vec<Token>) -> Result<(), String> {
+fn execute_tokens(
+    stack: &mut Stack,
+    tokens: Vec<Token>,
+    dict: &mut HashMap<String, Vec<Token>>,
+) -> Result<(), String> {
     let mut i = 0;
     while i < tokens.len() {
         match &tokens[i] {
             Token::Number(n) => {
-                stack.push(*n)?;
+                handle_number(stack, *n)?;
                 i += 1;
             }
             Token::StringLiteral(s) => {
-                print!("{}", s);
+                handle_string_literal(s);
                 i += 1;
             }
-            Token::Word(word) => match word.to_uppercase().as_str() {
-                "IF" => {
-                    i = execute_conditional(stack, &tokens, i)?;
-                }
-                _ => {
-                    handle_word(stack, word)?;
-                    i += 1;
-                }
-            },
+            Token::Word(word) => {
+                i = handle_word_token(stack, word, &tokens, i, dict)?;
+            }
         }
     }
     Ok(())
 }
 
+fn handle_number(stack: &mut Stack, number: i16) -> Result<(), String> {
+    stack.push(number)
+}
+
+fn handle_string_literal(s: &str) {
+    print!("{}", s);
+}
+
+fn handle_word_token(
+    stack: &mut Stack,
+    word: &str,
+    tokens: &[Token],
+    i: usize,
+    dict: &mut HashMap<String, Vec<Token>>,
+) -> Result<usize, String> {
+    let word_upper = word.to_uppercase();
+    if word_upper == ":" {
+        handle_definition(tokens, i, dict)
+    } else if let Some(def_tokens) = dict.get(&word_upper) {
+        execute_tokens(stack, def_tokens.clone(), dict)?;
+        Ok(i + 1)
+    } else if word_upper == "IF" {
+        execute_conditional(stack, tokens, i, dict)
+    } else {
+        handle_word(stack, word)?;
+        Ok(i + 1)
+    }
+}
+
+fn handle_definition(
+    tokens: &[Token],
+    mut i: usize,
+    dict: &mut HashMap<String, Vec<Token>>,
+) -> Result<usize, String> {
+    i += 1;
+    if i >= tokens.len() {
+        return Err("invalid-word".to_string());
+    }
+    let name_token = &tokens[i];
+    let name = if let Token::Word(w) = name_token {
+        w.to_uppercase()
+    } else {
+        return Err("invalid-word".to_string());
+    };
+    // Verificacion de que no se redifina numero y devuelvo invalid-word como dice en tp: https://taller-1-fiuba-rust.github.io/proyecto/25C1/ejercicio_individual.html#manejo-de-erroress
+    if name.parse::<i16>().is_ok() {
+        return Err("invalid-word".to_string());
+    }
+    i += 1;
+    let mut definition = Vec::new();
+    while i < tokens.len() {
+        if let Token::Word(ref w) = tokens[i] {
+            if w.to_uppercase() == ";" {
+                break;
+            }
+        }
+        definition.push(tokens[i].clone());
+        i += 1;
+    }
+    if i == tokens.len() {
+        return Err("invalid-word".to_string());
+    }
+    i += 1;
+    dict.insert(name, definition);
+    Ok(i)
+}
+
+
 fn execute_conditional(
     stack: &mut Stack,
     tokens: &[Token],
     if_index: usize,
+    dict: &mut HashMap<String, Vec<Token>>,
 ) -> Result<usize, String> {
     let (else_index, then_index) = find_else_then_indices(tokens, if_index)?;
 
@@ -80,10 +149,10 @@ fn execute_conditional(
     if condition_true {
         let end = else_index.unwrap_or(then_idx);
         let branch_tokens = tokens[if_index + 1..end].to_vec();
-        execute_tokens(stack, branch_tokens)?;
+        execute_tokens(stack, branch_tokens, dict)?;
     } else if let Some(else_idx) = else_index {
         let branch_tokens = tokens[else_idx + 1..then_idx].to_vec();
-        execute_tokens(stack, branch_tokens)?;
+        execute_tokens(stack, branch_tokens, dict)?;
     }
     Ok(then_idx + 1)
 }
