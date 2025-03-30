@@ -14,99 +14,90 @@ fn main() {
     }
 
     let filename = &args[1];
-
-    //TODO: Ver si este unwrap se puede usar. Entiendo que si pq no hace el panic. Aca la idea es ver si mandaron el parametro sino lo hacemos nosotros?
     let stack_size = args.get(2).and_then(|s| s.parse::<usize>().ok()).unwrap_or(1024);
 
-    // Leer archivo que tiene las operaciones a realizar. TODO: cambiar el expect.
     let code = fs::read_to_string(filename).expect("No se pudo leer el archivo");
-
-    // Tokenizar --> Vemos que significa cada linea
     let tokens = tokenize(&code);
 
-    // Crear stack
     let mut stack = Stack::new(stack_size);
 
-
-    // No me queda claro si debemos poner esta parte en otro lado  pq estamos haciendo el manejo del stack.
-    // Ejecutar tokens simples. Ver de no usar unwrap sino el manejo de errores como dice la consigna.
-    for token in tokens {
-        match token {
-            Token::Number(n) => {
-                if let Err(e) = stack.push(n) {
-                    eprintln!("Error: {}", e);
-                    break;
-                }
-            }
-            Token::Word(word) => {
-                match word.to_uppercase().as_str() {
-                    "+" => {
-                        let b = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let a = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let _ = stack.push(a + b);
-                    }
-                    "*" => {
-                        let b = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let a = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let _ = stack.push(a * b);
-                    }
-                    "-" => {
-                        let b = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let a = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let _ = stack.push(a - b);
-                    }
-                    "/" => {
-                        let b = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let a = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let _ = stack.push(a / b);
-                    }
-                    // Operaciones de manipulación de la pila:
-                    "DUP" => {
-                        let val = stack.peek().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let _ = stack.push(val);
-                    }
-                    "DROP" => {
-                        let _ = stack.pop();
-                    }
-                    "SWAP" => {
-                        let b = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let a = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let _ = stack.push(b);
-                        let _ = stack.push(a);
-                    }
-                    "OVER" => {
-                        // Duplica el segundo elemento desde la parte superior
-                        let val = stack.peek_n(1).unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let _ = stack.push(val);
-                    }
-                    "ROT" => {
-                        // ROT: rota los tres primeros elementos: ( a b c -- b c a )
-                        let c = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let b = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let a = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        let _ = stack.push(b);
-                        let _ = stack.push(c);
-                        let _ = stack.push(a);
-                    }
-                    //OPERACIONES DE SALIDA
-                    "." => {
-                        let val = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
-                        println!("{}", val);
-                    }
-                    "CR" => println!(),
-                    _ => {
-                        eprintln!("Word no reconocida: {}", word);
-                    }
-                }
-            }
-            Token::StringLiteral(s) => {
-                print!("{}", s);
-            }
-        }
+    if let Err(e) = execute_tokens(&mut stack, tokens) {
+        eprintln!("Error durante la ejecución: {}", e);
     }
 
-    // Guardar stack en archivo (muy básico por ahora)
+    save_stack_to_file(&stack, "stack.fth").expect("No se pudo escribir stack.fth");
+}
+
+fn execute_tokens(stack: &mut Stack, tokens: Vec<Token>) -> Result<(), String> {
+    for token in tokens {
+        match token {
+            Token::Number(n) => stack.push(n).map_err(|e| e.to_string())?,
+            Token::Word(word) => handle_word(stack, &word)?,
+            Token::StringLiteral(s) => print!("{}", s),
+        }
+    }
+    Ok(())
+}
+
+fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
+    match word.to_uppercase().as_str() {
+        "+" => apply_binary_op(stack, |a, b| a + b),
+        "-" => apply_binary_op(stack, |a, b| a - b),
+        "*" => apply_binary_op(stack, |a, b| a * b),
+        "/" => apply_binary_op(stack, |a, b| a / b),
+        "DUP" => {
+            let val = stack.peek().map_err(|e| e.to_string())?;
+            stack.push(val).map_err(|e| e.to_string())
+        }
+        "DROP" => {
+            stack.pop().map_err(|e| e.to_string())?;
+            Ok(())
+        }
+        "SWAP" => {
+            let b = stack.pop().map_err(|e| e.to_string())?;
+            let a = stack.pop().map_err(|e| e.to_string())?;
+            stack.push(b).map_err(|e| e.to_string())?;
+            stack.push(a).map_err(|e| e.to_string())
+        }
+        "OVER" => {
+            let val = stack.peek_n(1).map_err(|e| e.to_string())?;
+            stack.push(val).map_err(|e| e.to_string())
+        }
+        "ROT" => {
+            let c = stack.pop().map_err(|e| e.to_string())?;
+            let b = stack.pop().map_err(|e| e.to_string())?;
+            let a = stack.pop().map_err(|e| e.to_string())?;
+            stack.push(b).map_err(|e| e.to_string())?;
+            stack.push(c).map_err(|e| e.to_string())?;
+            stack.push(a).map_err(|e| e.to_string())
+        }
+        "." => {
+            let val = stack.pop().map_err(|e| e.to_string())?;
+            println!("{}", val);
+            Ok(())
+        }
+        "CR" => {
+            println!();
+            Ok(())
+        }
+        _ => Err(format!("Word no reconocida: {}", word)),
+    }
+}
+
+fn apply_binary_op<F>(stack: &mut Stack, op: F) -> Result<(), String>
+where
+    F: Fn(i16, i16) -> i16,
+{
+    let b = stack.pop().map_err(|e| e.to_string())?;
+    let a = stack.pop().map_err(|e| e.to_string())?;
+    stack.push(op(a, b)).map_err(|e| e.to_string())
+}
+
+fn save_stack_to_file(stack: &Stack, filename: &str) -> Result<(), String> {
     let stack_vec = stack.to_vec();
-    fs::write("stack.fth", stack_vec.iter().map(|n| n.to_string() + "\n").collect::<String>())
-        .expect("No se pudo escribir stack.fth");
+    fs::write(
+        filename,
+        stack_vec.iter().map(|n| n.to_string() + "\n").collect::<String>(),
+    )
+    .map_err(|e| e.to_string())
 }

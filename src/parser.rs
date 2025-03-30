@@ -12,21 +12,16 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     while let Some(word) = iter.next() {
         if word.starts_with(".\"") {
             let mut string = String::new();
-            // Extraer el contenido a partir de la posición 2 (después de .")
             let mut token_content = word[2..].to_string();
-            // Si el token ya termina con comillas, significa que es una sola pieza
             if token_content.ends_with('"') {
-                // Quitar la comilla final
                 token_content.pop();
                 tokens.push(Token::StringLiteral(token_content));
                 continue;
             } else {
                 string.push_str(&token_content);
             }
-            // Mientras no se encuentre el token que termina con comillas
             while let Some(next_word) = iter.next() {
                 if next_word.ends_with('"') {
-                    // Agregar un espacio y quitar la comilla final
                     string.push(' ');
                     let part = &next_word[..next_word.len() - 1];
                     string.push_str(part);
