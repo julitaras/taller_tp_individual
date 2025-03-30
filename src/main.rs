@@ -111,7 +111,6 @@ fn handle_definition(
     } else {
         return Err("invalid-word".to_string());
     };
-    // Verificacion de que no se redifina numero y devuelvo invalid-word como dice en tp: https://taller-1-fiuba-rust.github.io/proyecto/25C1/ejercicio_individual.html#manejo-de-erroress
     if name.parse::<i16>().is_ok() {
         return Err("invalid-word".to_string());
     }
