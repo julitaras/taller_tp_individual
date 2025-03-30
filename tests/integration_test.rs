@@ -416,3 +416,50 @@ fn test_if_then_without_else() {
 
     cleanup_temp_file(&temp_file);
 }
+
+#[test]
+fn test_word_definition() {
+    let code = r#"
+: FOO 100 + ;
+1000 FOO FOO FOO .
+"#;
+    let temp_file = create_temp_file("test_definition.fth", code);
+    let output = run_binary_with_file(&temp_file);
+
+    let output_lines: Vec<String> = output
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| l.trim().to_string())
+        .collect();
+    let expected_lines = vec!["1300".to_string()];
+
+    assert_eq!(
+        output_lines, expected_lines,
+        "La salida no coincide con lo esperado para la definición: {:?}",
+        output_lines
+    );
+
+    cleanup_temp_file(&temp_file);
+}
+
+// #[test]
+// fn test_word_not_defined_return_err() {
+//     let code = r#"FOO"#;
+//     let temp_file = create_temp_file("test_definition.fth", code);
+//     let output = run_binary_with_file(&temp_file);
+
+//     let output_lines: Vec<String> = output
+//         .lines()
+//         .filter(|l| !l.trim().is_empty())
+//         .map(|l| l.trim().to_string())
+//         .collect();
+//     let expected_lines = vec!["?".to_string()];
+
+//     assert_eq!(
+//         output_lines, expected_lines,
+//         "La salida no coincide con lo esperado para la definición: {:?}",
+//         output_lines
+//     );
+
+//     cleanup_temp_file(&temp_file);
+// }

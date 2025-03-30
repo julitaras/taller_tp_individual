@@ -242,7 +242,7 @@ fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
             println!();
             Ok(())
         }
-        _ => Err(format!("Word no reconocida: {}", word)),
+        _ => Err("?".to_string()),
     }
 }
 
