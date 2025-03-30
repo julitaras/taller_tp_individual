@@ -71,6 +71,17 @@ fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
             stack.push(c).map_err(|e| e.to_string())?;
             stack.push(a).map_err(|e| e.to_string())
         }
+        //TODO: Ver bien!!
+        "=" => apply_binary_op(stack, |a, b| if a == b { -1 } else { 0 }),
+        "<" => apply_binary_op(stack, |a, b| if a < b { -1 } else { 0 }),
+        ">" => apply_binary_op(stack, |a, b| if a > b { -1 } else { 0 }),
+        "AND" => apply_binary_op(stack, |a, b| if a != 0 && b != 0 { -1 } else { 0 }),
+        "OR"  => apply_binary_op(stack, |a, b| if a != 0 || b != 0 { -1 } else { 0 }),
+        "NOT" => {
+            let a = stack.pop()?;
+            let result = if a == 0 { -1 } else { 0 };
+            stack.push(result)
+        }
         "." => {
             let val = stack.pop().map_err(|e| e.to_string())?;
             println!("{}", val);
