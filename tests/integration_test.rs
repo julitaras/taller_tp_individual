@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::fs::{File, remove_file};
 use std::io::Write;
 use std::path::PathBuf;
@@ -99,7 +100,7 @@ fn test_dot() {
     let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
-    let expected_lines = vec!["25"];
+    let expected_lines = vec!["25 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -175,7 +176,7 @@ fn test_dup() {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["42"];
+    let expected_lines = vec!["42 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -195,7 +196,7 @@ fn test_drop() {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["42"];
+    let expected_lines = vec!["42 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -215,7 +216,7 @@ fn test_swap() {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["1"];
+    let expected_lines = vec!["1 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -235,7 +236,7 @@ fn test_over() {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["10"];
+    let expected_lines = vec!["10 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -255,7 +256,7 @@ fn test_rot() {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["1"];
+    let expected_lines = vec!["1 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -275,7 +276,7 @@ fn test_equal() {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["-1", "0"];
+    let expected_lines = vec!["-1 ", "0 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -295,7 +296,7 @@ fn test_less_than() {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["-1", "0"];
+    let expected_lines = vec!["-1 ", "0 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -315,7 +316,7 @@ fn test_greater_than() {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["-1", "0"];
+    let expected_lines = vec!["-1 ", "0 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -327,22 +328,59 @@ fn test_greater_than() {
 }
 
 #[test]
-fn test_and() {
-    let temp_file = create_temp_file(
-        "test_and.fth",
-        "-1 -1 AND . CR\n-1 0 AND . CR\n0 0 AND . CR",
-    );
+fn test_and_both_true() {
+    let temp_file = create_temp_file("test_and_both_true.fth", "-1 -1 AND . CR");
     let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["-1", "0", "0"];
+    let expected_lines = vec!["-1 "];
 
     assert_eq!(
         output_lines, expected_lines,
-        "La salida no coincide con lo esperado para 'AND': {:?}",
+        "La salida no coincide con lo esperado para 'AND' con ambos valores verdaderos: {:?}",
+        output_lines
+    );
+
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_and_one_false() {
+    let temp_file = create_temp_file("test_and_one_false.fth", "-1 0 AND . CR");
+    let output = run_binary_with_file(&temp_file);
+
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+    let expected_lines = vec!["0 "];
+
+    assert_eq!(
+        output_lines, expected_lines,
+        "La salida no coincide con lo esperado para 'AND' con un valor falso: {:?}",
+        output_lines
+    );
+
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_and_both_false() {
+    let temp_file = create_temp_file("test_and_both_false.fth", "0 0 AND . CR");
+    let output = run_binary_with_file(&temp_file);
+
+    let output_lines: Vec<&str> = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+    let expected_lines = vec!["0 "];
+
+    assert_eq!(
+        output_lines, expected_lines,
+        "La salida no coincide con lo esperado para 'AND' con ambos valores falsos: {:?}",
         output_lines
     );
 
@@ -358,7 +396,7 @@ fn test_or() {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["-1", "0"];
+    let expected_lines = vec!["-1 ", "0 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -378,7 +416,7 @@ fn test_not() {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    let expected_lines = vec!["-1", "0"];
+    let expected_lines = vec!["-1 ", "0 "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -395,7 +433,7 @@ fn test_if_then() {
     let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
-    let expected_lines = vec!["42"];
+    let expected_lines = vec!["42 "];
     assert_eq!(output_lines, expected_lines, "Salida: {:?}", output_lines);
 
     cleanup_temp_file(&temp_file);
@@ -407,7 +445,7 @@ fn test_if_else_then() {
     let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
-    let expected_lines = vec!["99"];
+    let expected_lines = vec!["99 "];
     assert_eq!(output_lines, expected_lines, "Salida: {:?}", output_lines);
 
     cleanup_temp_file(&temp_file);
@@ -500,5 +538,34 @@ fn test_invalid_word_definition() {
     let output = run_binary_with_file(&temp_file);
     let expected = "invalid-word";
     assert_eq!(output.trim(), expected, "Salida: {:?}", output);
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_output_format() {
+    let code = r#"
+1 2 3 4 5
+. . CR .
+"#;
+    let temp_file = create_temp_file("test_output_format.fth", code);
+    let output = run_binary_with_file(&temp_file);
+
+    let output_lines: Vec<String> = output
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| l.trim().to_string())
+        .collect();
+    let expected_stdout = vec!["5 4".to_string(), "3".to_string()];
+    assert_eq!(output_lines, expected_stdout, "STDOUT: {:?}", output_lines);
+
+    let file_content = fs::read_to_string("stack.fth").expect("No se pudo leer stack.fth");
+    let file_lines: Vec<String> = file_content.lines().map(|l| l.trim().to_string()).collect();
+    let expected_stack = vec!["1".to_string(), "2".to_string()];
+    assert_eq!(
+        file_lines, expected_stack,
+        "Contenido de stack.fth: {:?}",
+        file_lines
+    );
+
     cleanup_temp_file(&temp_file);
 }

@@ -242,7 +242,7 @@ fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
         }
         "." => {
             let val = stack.pop().map_err(|e| e.to_string())?;
-            println!("{}", val);
+            print!("{} ", val);
             Ok(())
         }
         "CR" => {
