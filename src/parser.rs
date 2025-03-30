@@ -23,7 +23,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             for next_word in iter.by_ref() {
                 if let Some(_stripped) = next_word.strip_suffix('"') {
                     string.push(' ');
-                    // Aquí usamos strip_suffix para obtener la parte sin la comilla final
                     string.push_str(next_word.strip_suffix('"').unwrap());
                     break;
                 } else {
@@ -70,6 +69,16 @@ mod tests {
             Token::Word("/".to_string()),
             Token::Word("CR".to_string()),
             Token::Word(".".to_string()),
+        ];
+        assert_eq!(tokenize(input), expected);
+    }
+
+    #[test]
+    fn test_tokenize_multiline_string_literal() {
+        let input = ".\"Hello World\" .\"Another String\"";
+        let expected = vec![
+            Token::StringLiteral("Hello World".to_string()),
+            Token::StringLiteral("Another String".to_string()),
         ];
         assert_eq!(tokenize(input), expected);
     }

@@ -1,6 +1,7 @@
 use crate::parser::Token;
 use crate::stack::Stack;
 use std::collections::HashMap;
+use std::ops::ControlFlow;
 
 pub fn execute_tokens(
     stack: &mut Stack,
@@ -76,13 +77,9 @@ fn handle_definition(
     i += 1;
     let mut definition = Vec::new();
     while i < tokens.len() {
-        if let Token::Word(ref w) = tokens[i] {
-            if w.to_uppercase() == ";" {
-                break;
-            }
+        if let ControlFlow::Break(_) = parse_token_body(tokens, &mut i, &mut definition) {
+            break;
         }
-        definition.push(tokens[i].clone());
-        i += 1;
     }
     if i == tokens.len() {
         return Err("invalid-word".to_string());
@@ -90,6 +87,21 @@ fn handle_definition(
     i += 1;
     dict.insert(name, definition);
     Ok(i)
+}
+
+fn parse_token_body(
+    tokens: &[Token],
+    i: &mut usize,
+    definition: &mut Vec<Token>,
+) -> ControlFlow<()> {
+    if let Token::Word(ref w) = tokens[*i] {
+        if w.to_uppercase() == ";" {
+            return ControlFlow::Break(());
+        }
+    }
+    definition.push(tokens[*i].clone());
+    *i += 1;
+    ControlFlow::Continue(())
 }
 
 fn execute_conditional(

@@ -34,7 +34,7 @@ fn parse_args() -> (String, usize) {
         eprintln!("Uso: {} archivo.fth [tamaño_stack]", args[0]);
         std::process::exit(1);
     }
-    let filename = args[1].clone();
+    let filename = args[1].to_owned();
     let stack_size = args
         .get(2)
         .and_then(|s| s.parse::<usize>().ok())

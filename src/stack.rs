@@ -39,8 +39,8 @@ impl Stack {
         }
     }
 
-    pub fn to_vec(&self) -> Vec<i16> {
-        self.data.clone()
+    pub fn to_vec(&self) -> &[i16] {
+        &self.data
     }
 }
 
