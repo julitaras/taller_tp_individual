@@ -24,6 +24,20 @@ impl Stack {
         self.data.pop().ok_or_else(|| "stack-underflow".to_string())
     }
 
+     // Método para ver el elemento superior sin removerlo.
+    pub fn peek(&self) -> Result<i16, String> {
+        self.data.last().copied().ok_or_else(|| "stack-underflow".to_string())
+    }
+
+    // Método para ver el n-ésimo elemento desde la parte superior (0: top, 1: el siguiente, etc.)
+    pub fn peek_n(&self, n: usize) -> Result<i16, String> {
+        if self.data.len() > n {
+            Ok(self.data[self.data.len() - 1 - n])
+        } else {
+            Err("stack-underflow".to_string())
+        }
+    }
+
     pub fn to_vec(&self) -> Vec<i16> {
         self.data.clone()
     }
@@ -54,5 +68,35 @@ mod tests {
         assert!(stack.push(2).is_ok());
         // Este push debe fallar por overflow
         assert_eq!(stack.push(3), Err("stack-overflow".to_string()));
+    }
+
+    #[test]
+    fn test_peek() {
+        let mut stack = Stack::new(10);
+        // Prueba peek en stack con un solo elemento.
+        stack.push(42).unwrap();
+        assert_eq!(stack.peek().unwrap(), 42);
+    }
+
+    #[test]
+    fn test_peek_n() {
+        let mut stack = Stack::new(10);
+        // La pila: [1, 2, 3] (1 es el fondo y 3 el tope)
+        stack.push(1).unwrap();
+        stack.push(2).unwrap();
+        stack.push(3).unwrap();
+        // peek_n(0) debería devolver el tope: 3.
+        assert_eq!(stack.peek_n(0).unwrap(), 3);
+        // peek_n(1) debe devolver 2.
+        assert_eq!(stack.peek_n(1).unwrap(), 2);
+        // peek_n(2) debe devolver 1.
+        assert_eq!(stack.peek_n(2).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_peek_n_underflow() {
+        let stack = Stack::new(10);
+        // Si la pila está vacía, peek_n(0) debe devolver un error.
+        assert!(stack.peek_n(0).is_err());
     }
 }

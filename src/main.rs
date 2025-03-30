@@ -60,6 +60,35 @@ fn main() {
                         let a = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
                         let _ = stack.push(a / b);
                     }
+                    // Operaciones de manipulación de la pila:
+                    "DUP" => {
+                        let val = stack.peek().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
+                        let _ = stack.push(val);
+                    }
+                    "DROP" => {
+                        let _ = stack.pop();
+                    }
+                    "SWAP" => {
+                        let b = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
+                        let a = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
+                        let _ = stack.push(b);
+                        let _ = stack.push(a);
+                    }
+                    "OVER" => {
+                        // Duplica el segundo elemento desde la parte superior
+                        let val = stack.peek_n(1).unwrap_or_else(|e| { eprintln!("{}", e); 0 });
+                        let _ = stack.push(val);
+                    }
+                    "ROT" => {
+                        // ROT: rota los tres primeros elementos: ( a b c -- b c a )
+                        let c = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
+                        let b = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
+                        let a = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
+                        let _ = stack.push(b);
+                        let _ = stack.push(c);
+                        let _ = stack.push(a);
+                    }
+                    //OPERACIONES DE SALIDA
                     "." => {
                         let val = stack.pop().unwrap_or_else(|e| { eprintln!("{}", e); 0 });
                         println!("{}", val);
