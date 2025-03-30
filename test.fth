@@ -1,1 +1,1 @@
-25 10 + 3 * CR .
+."Hola Mundo" CR

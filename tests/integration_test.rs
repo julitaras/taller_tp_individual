@@ -26,6 +26,80 @@ fn cleanup_temp_file(file_path: &PathBuf) {
 }
 
 #[test]
+fn test_emit() {
+    let code = "65 EMIT CR";
+    let temp_file = create_temp_file("test_emit.fth", code);
+    let output = run_binary_with_file(&temp_file);
+
+    let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
+    let expected_lines = vec!["A"];
+
+    assert_eq!(
+        output_lines, expected_lines,
+        "La salida no coincide con lo esperado para EMIT: {:?}",
+        output_lines
+    );
+
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_cr() {
+    let code = "CR";
+    let temp_file = create_temp_file("test_cr.fth", code);
+    let output = run_binary_with_file(&temp_file);
+
+    let output_lines: Vec<&str> = output.lines().collect();
+    let expected_lines = vec![""];
+
+    assert_eq!(
+        output_lines, expected_lines,
+        "La salida no coincide con lo esperado para CR: {:?}",
+        output_lines
+    );
+
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_string_literal() {
+    //TODO: Ver el tema de los espacios: https://skilldrick.github.io/easyforth/#generating-output
+    // ." Hola Mundo" CR -> Imprime la cadena "Hola Mundo"
+    let code = ".\"Hola Mundo\" CR";
+    let temp_file = create_temp_file("test_string_literal.fth", code);
+    let output = run_binary_with_file(&temp_file);
+
+    let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
+    let expected_lines = vec!["Hola Mundo"];
+
+    assert_eq!(
+        output_lines, expected_lines,
+        "La salida no coincide con lo esperado para la cadena literal: {:?}",
+        output_lines
+    );
+
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
+fn test_dot() {
+    let code = "25 . CR";
+    let temp_file = create_temp_file("test_dot.fth", code);
+    let output = run_binary_with_file(&temp_file);
+
+    let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
+    let expected_lines = vec!["25"];
+
+    assert_eq!(
+        output_lines, expected_lines,
+        "La salida no coincide con lo esperado para '.': {:?}",
+        output_lines
+    );
+
+    cleanup_temp_file(&temp_file);
+}
+
+#[test]
 fn test_addition() {
     let temp_file = create_temp_file("test_addition.fth", "25 10 + CR .");
     let output = run_binary_with_file(&temp_file);
@@ -270,7 +344,6 @@ fn test_not() {
 
 #[test]
 fn test_if_then() {
-    // Condición verdadera: 1 IF 42 . THEN CR  => se debe imprimir "42"
     let temp_file = create_temp_file("test_if_then.fth", "1 IF 42 . THEN CR");
     let output = run_binary_with_file(&temp_file);
     
@@ -283,7 +356,6 @@ fn test_if_then() {
 
 #[test]
 fn test_if_else_then() {
-    // Condición falsa: 0 IF 42 . ELSE 99 . THEN CR  => se debe imprimir "99"
     let temp_file = create_temp_file("test_if_else_then.fth", "0 IF 42 . ELSE 99 . THEN CR");
     let output = run_binary_with_file(&temp_file);
     
@@ -296,7 +368,6 @@ fn test_if_else_then() {
 
 #[test]
 fn test_if_then_without_else() {
-    // Condición falsa y sin ELSE: 0 IF 42 . THEN CR  => no se debe imprimir nada
     let temp_file = create_temp_file("test_if_then_false.fth", "0 IF 42 . THEN CR");
     let output = run_binary_with_file(&temp_file);
     

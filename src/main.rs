@@ -149,6 +149,13 @@ fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
             let result = if a == 0 { -1 } else { 0 };
             stack.push(result)
         }
+        "EMIT" => {
+            let code = stack.pop()?;
+            let c = std::char::from_u32(code as u32)
+                .ok_or_else(|| "Valor para EMIT no es un carácter válido".to_string())?;
+            print!("{}", c);
+            Ok(())
+        }
         "." => {
             let val = stack.pop().map_err(|e| e.to_string())?;
             println!("{}", val);
