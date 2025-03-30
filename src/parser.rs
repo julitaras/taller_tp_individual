@@ -10,7 +10,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     let mut iter = input.split_whitespace().peekable();
 
     while let Some(word) = iter.next() {
-        if word.starts_with(".\"") {
+        if let Some(_stripped) = word.strip_prefix(".\"") {
             let mut string = String::new();
             let mut token_content = word[2..].to_string();
             if token_content.ends_with('"') {
@@ -20,11 +20,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             } else {
                 string.push_str(&token_content);
             }
-            while let Some(next_word) = iter.next() {
-                if next_word.ends_with('"') {
+            for next_word in iter.by_ref() {
+                if let Some(_stripped) = next_word.strip_suffix('"') {
                     string.push(' ');
-                    let part = &next_word[..next_word.len() - 1];
-                    string.push_str(part);
+                    // Aquí usamos strip_suffix para obtener la parte sin la comilla final
+                    string.push_str(next_word.strip_suffix('"').unwrap());
                     break;
                 } else {
                     string.push(' ');

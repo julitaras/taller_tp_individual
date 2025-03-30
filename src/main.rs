@@ -8,6 +8,7 @@ use stack::Stack;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::path::PathBuf;
 
 fn main() {
     let (filename, stack_size) = parse_args();
@@ -47,8 +48,10 @@ fn read_file(filename: &str) -> String {
 
 fn save_stack_to_file(stack: &Stack, filename: &str) -> Result<(), String> {
     let stack_vec = stack.to_vec();
+    let cwd = env::current_dir().map_err(|e| e.to_string())?;
+    let file_path: PathBuf = cwd.join(filename);
     fs::write(
-        filename,
+        file_path,
         stack_vec
             .iter()
             .map(|n| n.to_string() + "\n")
