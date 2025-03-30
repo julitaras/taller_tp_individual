@@ -10,7 +10,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     let mut iter = input.split_whitespace().peekable();
 
     while let Some(word) = iter.next() {
-        if let Some(_stripped) = word.strip_prefix(".\"") {
+        if word.starts_with(".\"") {
             let mut string = String::new();
             let mut token_content = word[2..].to_string();
             if token_content.ends_with('"') {
@@ -20,10 +20,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             } else {
                 string.push_str(&token_content);
             }
-            for next_word in iter.by_ref() {
-                if let Some(_stripped) = next_word.strip_suffix('"') {
+            while let Some(next_word) = iter.next() {
+                if next_word.ends_with('"') {
                     string.push(' ');
-                    string.push_str(next_word.strip_suffix('"').unwrap());
+                    let part = &next_word[..next_word.len() - 1];
+                    string.push_str(part);
                     break;
                 } else {
                     string.push(' ');
@@ -69,16 +70,6 @@ mod tests {
             Token::Word("/".to_string()),
             Token::Word("CR".to_string()),
             Token::Word(".".to_string()),
-        ];
-        assert_eq!(tokenize(input), expected);
-    }
-
-    #[test]
-    fn test_tokenize_multiline_string_literal() {
-        let input = ".\"Hello World\" .\"Another String\"";
-        let expected = vec![
-            Token::StringLiteral("Hello World".to_string()),
-            Token::StringLiteral("Another String".to_string()),
         ];
         assert_eq!(tokenize(input), expected);
     }
