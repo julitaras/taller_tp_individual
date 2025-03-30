@@ -7,16 +7,8 @@ use stack::Stack;
 use parser::{Token, tokenize};
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        eprintln!("Uso: {} archivo.fth [tamaño_stack]", args[0]);
-        std::process::exit(1);
-    }
-
-    let filename = &args[1];
-    let stack_size = args.get(2).and_then(|s| s.parse::<usize>().ok()).unwrap_or(1024);
-
-    let code = fs::read_to_string(filename).expect("No se pudo leer el archivo");
+    let (filename, stack_size) = parse_args();
+    let code = read_file(&filename);
     let tokens = tokenize(&code);
 
     let mut stack = Stack::new(stack_size);
@@ -25,7 +17,24 @@ fn main() {
         eprintln!("Error durante la ejecución: {}", e);
     }
 
-    save_stack_to_file(&stack, "stack.fth").expect("No se pudo escribir stack.fth");
+    if let Err(e) = save_stack_to_file(&stack, "stack.fth") {
+        eprintln!("Error al guardar el estado de la pila: {}", e);
+    }
+}
+
+fn parse_args() -> (String, usize) {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Uso: {} archivo.fth [tamaño_stack]", args[0]);
+        std::process::exit(1);
+    }
+    let filename = args[1].clone();
+    let stack_size = args.get(2).and_then(|s| s.parse::<usize>().ok()).unwrap_or(1024);
+    (filename, stack_size)
+}
+
+fn read_file(filename: &str) -> String {
+    fs::read_to_string(filename).expect("No se pudo leer el archivo")
 }
 
 fn execute_tokens(stack: &mut Stack, tokens: Vec<Token>) -> Result<(), String> {
@@ -43,11 +52,9 @@ fn execute_tokens(stack: &mut Stack, tokens: Vec<Token>) -> Result<(), String> {
             Token::Word(word) => {
                 match word.to_uppercase().as_str() {
                     "IF" => {
-                        // Se delega la ejecución del condicional y se actualiza el índice.
                         i = execute_conditional(stack, &tokens, i)?;
                     }
                     _ => {
-                        // Para el resto, se usa el handler habitual.
                         handle_word(stack, word)?;
                         i += 1;
                     }
@@ -59,14 +66,28 @@ fn execute_tokens(stack: &mut Stack, tokens: Vec<Token>) -> Result<(), String> {
 }
 
 fn execute_conditional(stack: &mut Stack, tokens: &[Token], if_index: usize) -> Result<usize, String> {
-    // Se asume que tokens[if_index] es "IF". Primero se poppea la condición.
+    let (else_index, then_index) = find_else_then_indices(tokens, if_index)?;
+
     let cond = stack.pop()?;
     let condition_true = cond != 0;
 
-    // Buscamos las posiciones de ELSE (opcional) y de THEN (obligatorio)
+    let then_idx = then_index.unwrap();
+    if condition_true {
+        let end = else_index.unwrap_or(then_idx);
+        let branch_tokens = tokens[if_index + 1..end].to_vec();
+        execute_tokens(stack, branch_tokens)?;
+    } else if let Some(else_idx) = else_index {
+        let branch_tokens = tokens[else_idx + 1..then_idx].to_vec();
+        execute_tokens(stack, branch_tokens)?;
+    }
+    Ok(then_idx + 1)
+}
+
+fn find_else_then_indices(tokens: &[Token], if_index: usize) -> Result<(Option<usize>, Option<usize>), String> {
     let mut else_index: Option<usize> = None;
     let mut then_index: Option<usize> = None;
     let mut j = if_index + 1;
+
     while j < tokens.len() {
         if let Token::Word(ref w) = tokens[j] {
             let w_upper = w.to_uppercase();
@@ -83,20 +104,7 @@ fn execute_conditional(stack: &mut Stack, tokens: &[Token], if_index: usize) -> 
     if then_index.is_none() {
         return Err("Estructura IF sin THEN".to_string());
     }
-    let then_idx = then_index.unwrap();
-
-    if condition_true {
-        // Si la condición es verdadera, ejecutamos los tokens entre IF y ELSE (o IF y THEN si no hay ELSE)
-        let end = else_index.unwrap_or(then_idx);
-        let branch_tokens = tokens[if_index + 1..end].to_vec();
-        execute_tokens(stack, branch_tokens)?;
-    } else if let Some(else_idx) = else_index {
-        // Si la condición es falsa y hay ELSE, ejecutamos el bloque de ELSE.
-        let branch_tokens = tokens[else_idx + 1..then_idx].to_vec();
-        execute_tokens(stack, branch_tokens)?;
-    }
-    // Se retorna el índice posterior a THEN para continuar la ejecución.
-    Ok(then_idx + 1)
+    Ok((else_index, then_index))
 }
 
 fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
