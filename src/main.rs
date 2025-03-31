@@ -63,7 +63,7 @@ fn main() {
 
     if let Err(e) = execute_tokens(&mut stack, &tokens, &mut dictionary) {
         print!("{}", e);
-        std::process::exit(1);
+        stack = Stack::new(stack_size);
     }
 
     if let Err(e) = save_stack_to_file(&stack, "stack.fth") {
