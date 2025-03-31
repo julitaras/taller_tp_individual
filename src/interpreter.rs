@@ -1,6 +1,6 @@
 //! Módulo del intérprete Forth.
 //!
-//! Este módulo implementa la lógica principal del intérprete para el lenguaje Forth. 
+//! Este módulo implementa la lógica principal del intérprete para el lenguaje Forth.
 //! Proporciona funciones para ejecutar tokens, manejar definiciones de palabras (words),
 //! estructuras condicionales y operaciones aritméticas y lógicas.
 //!
@@ -32,22 +32,22 @@ use crate::stack::Stack;
 use std::collections::HashMap;
 
 /// Ejecuta una secuencia de tokens sobre la pila utilizando el diccionario para definiciones.
-/// 
+///
 /// Esta función procesa cada token en el orden en que aparece y realiza la operación correspondiente:
 /// - Empuja números a la pila.
 /// - Ejecuta palabras definidas en el diccionario.
 /// - Maneja literales de cadena.
 /// - Ejecuta operaciones aritméticas, lógicas y condicionales.
-/// 
+///
 /// # Parámetros
 /// - `stack`: Pila sobre la que se realizarán las operaciones.
 /// - `tokens`: Slice de tokens obtenido a partir del código fuente.
 /// - `dict`: Diccionario que mapea nombres de palabras (words) a slices de tokens (sus definiciones).
-/// 
+///
 /// # Retorna
 /// - `Ok(())` si la ejecución se realizó sin errores.
 /// - `Err(String)` si ocurre algún error durante la ejecución.
-/// 
+///
 /// # Ejemplo
 /// ```rust
 /// use taller_tp_individual::interpreter::execute_tokens;
@@ -184,19 +184,19 @@ fn handle_word_token<'a>(
 }
 
 /// Define una nueva palabra (word).
-/// 
+///
 /// La definición tiene la sintaxis: `: <word-name> <word-body> ;`.
 /// Esta función almacena la definición en el diccionario `dict` como un slice de tokens.
-/// 
+///
 /// # Parámetros
 /// - `tokens`: Slice de tokens que contiene la definición.
 /// - `i`: Índice actual en el slice de tokens.
 /// - `dict`: Diccionario donde se almacenará la definición.
-/// 
+///
 /// # Retorna
 /// - `Ok(usize)`: El índice del siguiente token después de la definición.
 /// - `Err(String)`: Si la definición es inválida.
-/// 
+///
 /// # Ejemplo
 /// ```rust
 /// use taller_tp_individual::interpreter::handle_definition;
@@ -251,19 +251,19 @@ fn handle_definition<'a>(
 }
 
 /// Ejecuta una estructura condicional en el lenguaje Forth.
-/// 
+///
 /// La sintaxis es: `IF <true-branch> [ELSE <false-branch>] THEN`.
-/// 
+///
 /// # Parámetros
 /// - `stack`: Pila sobre la que se realizarán las operaciones.
 /// - `tokens`: Slice de tokens que contiene la estructura condicional.
 /// - `if_index`: Índice del token `IF`.
 /// - `dict`: Diccionario que mapea nombres de palabras a slices de tokens.
-/// 
+///
 /// # Retorna
 /// - `Ok(usize)`: El índice del siguiente token después de `THEN`.
 /// - `Err(String)`: Si la estructura condicional es inválida.
-/// 
+///
 /// # Ejemplo
 /// ```rust
 /// use taller_tp_individual::interpreter::execute_conditional;
@@ -308,7 +308,7 @@ fn execute_conditional<'a>(
 }
 
 /// Busca los índices de los tokens "ELSE" y "THEN" en una estructura condicional.
-/// 
+///
 /// Retorna una tupla `(else_index, then_index)`.
 fn find_else_then_indices(
     tokens: &[Token],
@@ -337,19 +337,19 @@ fn find_else_then_indices(
     Ok((else_index, then_index))
 }
 
-/// Maneja la ejecución de las palabras (words) built-in.
-/// 
-/// Esta función ejecuta operaciones aritméticas, lógicas y otras palabras predefinidas.
-/// Si la palabra no se reconoce, retorna el error `"?"`.
-/// 
+/// Maneja la ejecución de palabras (words) en el lenguaje Forth.
+///
+/// Esta función identifica y ejecuta palabras predefinidas (built-in) o realiza operaciones
+/// aritméticas y lógicas utilizando un diccionario de operaciones binarias.
+///
 /// # Parámetros
-/// - `stack`: Pila sobre la que se realizarán las operaciones.
-/// - `word`: Palabra a ejecutar.
-/// 
+/// - `stack`: La pila sobre la que se realizarán las operaciones.
+/// - `word`: La palabra a ejecutar.
+///
 /// # Retorna
 /// - `Ok(())` si la operación se ejecutó correctamente.
 /// - `Err(String)` si ocurre un error o la palabra no se reconoce.
-/// 
+///
 /// # Ejemplo
 /// ```rust
 /// use taller_tp_individual::interpreter::handle_word;
@@ -362,76 +362,409 @@ fn find_else_then_indices(
 /// assert_eq!(stack.pop().unwrap(), 5);
 /// ```
 fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
+    let binary_ops: HashMap<&str, fn(i16, i16) -> i16> = HashMap::from([
+        ("+", add as fn(i16, i16) -> i16),
+        ("-", subtract as fn(i16, i16) -> i16),
+        ("*", multiply as fn(i16, i16) -> i16),
+        ("=", equals as fn(i16, i16) -> i16),
+        ("<", less_than as fn(i16, i16) -> i16),
+        (">", greater_than as fn(i16, i16) -> i16),
+        ("AND", and_op as fn(i16, i16) -> i16),
+        ("OR", or_op as fn(i16, i16) -> i16),
+    ]);
+
+    if let Some(op) = binary_ops.get(word.to_uppercase().as_str()) {
+        return apply_binary_op(stack, *op);
+    }
+
     match word.to_uppercase().as_str() {
-        "+" => apply_binary_op(stack, |a, b| a + b),
-        "-" => apply_binary_op(stack, |a, b| a - b),
-        "*" => apply_binary_op(stack, |a, b| a * b),
-        "/" => {
-            let b = stack.pop()?;
-            if b == 0 {
-                return Err("division-by-zero".to_string());
-            }
-            let a = stack.pop()?;
-            stack.push(a / b)
-        }
-        "DUP" => {
-            let val = stack.peek().map_err(|e| e.to_string())?;
-            stack.push(val).map_err(|e| e.to_string())
-        }
-        "DROP" => {
-            stack.pop().map_err(|e| e.to_string())?;
-            Ok(())
-        }
-        "SWAP" => {
-            let b = stack.pop().map_err(|e| e.to_string())?;
-            let a = stack.pop().map_err(|e| e.to_string())?;
-            stack.push(b).map_err(|e| e.to_string())?;
-            stack.push(a).map_err(|e| e.to_string())
-        }
-        "OVER" => {
-            let val = stack.peek_n(1).map_err(|e| e.to_string())?;
-            stack.push(val).map_err(|e| e.to_string())
-        }
-        "ROT" => {
-            let c = stack.pop().map_err(|e| e.to_string())?;
-            let b = stack.pop().map_err(|e| e.to_string())?;
-            let a = stack.pop().map_err(|e| e.to_string())?;
-            stack.push(b).map_err(|e| e.to_string())?;
-            stack.push(c).map_err(|e| e.to_string())?;
-            stack.push(a).map_err(|e| e.to_string())
-        }
-        "=" => apply_binary_op(stack, |a, b| if a == b { -1 } else { 0 }),
-        "<" => apply_binary_op(stack, |a, b| if a < b { -1 } else { 0 }),
-        ">" => apply_binary_op(stack, |a, b| if a > b { -1 } else { 0 }),
-        "AND" => apply_binary_op(stack, |a, b| if a != 0 && b != 0 { -1 } else { 0 }),
-        "OR" => apply_binary_op(stack, |a, b| if a != 0 || b != 0 { -1 } else { 0 }),
-        "NOT" => {
-            let a = stack.pop()?;
-            let result = if a == 0 { -1 } else { 0 };
-            stack.push(result)
-        }
-        "EMIT" => {
-            let code = stack.pop()?;
-            let c = std::char::from_u32(code as u32)
-                .ok_or_else(|| "Valor para EMIT no es un carácter válido".to_string())?;
-            print!("{} ", c);
-            Ok(())
-        }
-        "." => {
-            let val = stack.pop().map_err(|e| e.to_string())?;
-            print!("{} ", val);
-            Ok(())
-        }
-        "CR" => {
-            println!();
-            Ok(())
-        }
+        "/" => handle_division(stack),
+        "DUP" => handle_dup(stack),
+        "DROP" => handle_drop(stack),
+        "SWAP" => handle_swap(stack),
+        "OVER" => handle_over(stack),
+        "ROT" => handle_rot(stack),
+        "NOT" => handle_not(stack),
+        "EMIT" => handle_emit(stack),
+        "." => handle_dot(stack),
+        "CR" => handle_cr(),
         _ => Err("?".to_string()),
     }
 }
 
+/// Suma dos números enteros.
+///
+/// # Parámetros
+/// - `a`: El primer número.
+/// - `b`: El segundo número.
+///
+/// # Retorna
+/// - La suma de `a` y `b`.
+fn add(a: i16, b: i16) -> i16 {
+    a + b
+}
+
+/// Resta dos números enteros.
+///
+/// # Parámetros
+/// - `a`: El primer número.
+/// - `b`: El segundo número.
+///
+/// # Retorna
+/// - La resta de `a` menos `b`.
+fn subtract(a: i16, b: i16) -> i16 {
+    a - b
+}
+
+/// Multiplica dos números enteros.
+///
+/// # Parámetros
+/// - `a`: El primer número.
+/// - `b`: El segundo número.
+///
+/// # Retorna
+/// - El producto de `a` y `b`.
+fn multiply(a: i16, b: i16) -> i16 {
+    a * b
+}
+
+/// Compara si dos números son iguales.
+///
+/// # Parámetros
+/// - `a`: El primer número.
+/// - `b`: El segundo número.
+///
+/// # Retorna
+/// - `-1` si `a` es igual a `b`.
+/// - `0` en caso contrario.
+fn equals(a: i16, b: i16) -> i16 {
+    if a == b { -1 } else { 0 }
+}
+
+/// Compara si un número es menor que otro.
+///
+/// # Parámetros
+/// - `a`: El primer número.
+/// - `b`: El segundo número.
+///
+/// # Retorna
+/// - `-1` si `a` es menor que `b`.
+/// - `0` en caso contrario.
+fn less_than(a: i16, b: i16) -> i16 {
+    if a < b { -1 } else { 0 }
+}
+
+/// Compara si un número es mayor que otro.
+///
+/// # Parámetros
+/// - `a`: El primer número.
+/// - `b`: El segundo número.
+///
+/// # Retorna
+/// - `-1` si `a` es mayor que `b`.
+/// - `0` en caso contrario.
+fn greater_than(a: i16, b: i16) -> i16 {
+    if a > b { -1 } else { 0 }
+}
+
+/// Realiza una operación lógica AND entre dos números.
+///
+/// # Parámetros
+/// - `a`: El primer número.
+/// - `b`: El segundo número.
+///
+/// # Retorna
+/// - `-1` si ambos números son diferentes de `0`.
+/// - `0` en caso contrario.
+fn and_op(a: i16, b: i16) -> i16 {
+    if a != 0 && b != 0 { -1 } else { 0 }
+}
+
+/// Realiza una operación lógica OR entre dos números.
+///
+/// # Parámetros
+/// - `a`: El primer número.
+/// - `b`: El segundo número.
+///
+/// # Retorna
+/// - `-1` si al menos uno de los números es diferente de `0`.
+/// - `0` en caso contrario.
+fn or_op(a: i16, b: i16) -> i16 {
+    if a != 0 || b != 0 { -1 } else { 0 }
+}
+
+/// Maneja la división entre dos números.
+///
+/// # Parámetros
+/// - `stack`: La pila sobre la que se realizará la operación.
+///
+/// # Retorna
+/// - `Ok(())` si la operación se realizó correctamente.
+/// - `Err(String)` si se intenta dividir por cero.
+fn handle_division(stack: &mut Stack) -> Result<(), String> {
+    let b = stack.pop()?;
+    if b == 0 {
+        return Err("division-by-zero".to_string());
+    }
+    let a = stack.pop()?;
+    stack.push(a / b)
+}
+
+/// Duplica el valor en la cima de la pila.
+///
+/// Esta función toma el valor superior de la pila y lo empuja nuevamente,
+/// duplicando el valor.
+///
+/// # Parámetros
+/// - `stack`: La pila sobre la que se realizará la operación.
+///
+/// # Retorna
+/// - `Ok(())` si la operación se realizó correctamente.
+/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::stack::Stack;
+/// use taller_tp_individual::interpreter::handle_dup;
+///
+/// let mut stack = Stack::new(10);
+/// stack.push(42).unwrap();
+/// handle_dup(&mut stack).unwrap();
+/// assert_eq!(stack.pop().unwrap(), 42);
+/// assert_eq!(stack.pop().unwrap(), 42);
+/// ```
+fn handle_dup(stack: &mut Stack) -> Result<(), String> {
+    let val = stack.peek().map_err(|e| e.to_string())?;
+    stack.push(val).map_err(|e| e.to_string())
+}
+
+/// Elimina el valor en la cima de la pila.
+///
+/// Esta función elimina el valor superior de la pila.
+///
+/// # Parámetros
+/// - `stack`: La pila sobre la que se realizará la operación.
+///
+/// # Retorna
+/// - `Ok(())` si la operación se realizó correctamente.
+/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::stack::Stack;
+/// use taller_tp_individual::interpreter::handle_drop;
+///
+/// let mut stack = Stack::new(10);
+/// stack.push(42).unwrap();
+/// handle_drop(&mut stack).unwrap();
+/// assert!(stack.is_empty());
+/// ```
+fn handle_drop(stack: &mut Stack) -> Result<(), String> {
+    stack.pop().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Intercambia los dos valores superiores de la pila.
+///
+/// Esta función toma los dos valores superiores de la pila y los intercambia.
+///
+/// # Parámetros
+/// - `stack`: La pila sobre la que se realizará la operación.
+///
+/// # Retorna
+/// - `Ok(())` si la operación se realizó correctamente.
+/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::stack::Stack;
+/// use taller_tp_individual::interpreter::handle_swap;
+///
+/// let mut stack = Stack::new(10);
+/// stack.push(1).unwrap();
+/// stack.push(2).unwrap();
+/// handle_swap(&mut stack).unwrap();
+/// assert_eq!(stack.pop().unwrap(), 1);
+/// assert_eq!(stack.pop().unwrap(), 2);
+/// ```
+fn handle_swap(stack: &mut Stack) -> Result<(), String> {
+    let b = stack.pop().map_err(|e| e.to_string())?;
+    let a = stack.pop().map_err(|e| e.to_string())?;
+    stack.push(b).map_err(|e| e.to_string())?;
+    stack.push(a).map_err(|e| e.to_string())
+}
+
+/// Copia el segundo valor desde la cima de la pila.
+///
+/// Esta función toma el segundo valor desde la cima de la pila y lo empuja
+/// nuevamente a la pila.
+///
+/// # Parámetros
+/// - `stack`: La pila sobre la que se realizará la operación.
+///
+/// # Retorna
+/// - `Ok(())` si la operación se realizó correctamente.
+/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::stack::Stack;
+/// use taller_tp_individual::interpreter::handle_over;
+///
+/// let mut stack = Stack::new(10);
+/// stack.push(1).unwrap();
+/// stack.push(2).unwrap();
+/// handle_over(&mut stack).unwrap();
+/// assert_eq!(stack.pop().unwrap(), 1);
+/// assert_eq!(stack.pop().unwrap(), 2);
+/// assert_eq!(stack.pop().unwrap(), 1);
+/// ```
+fn handle_over(stack: &mut Stack) -> Result<(), String> {
+    let val = stack.peek_n(1).map_err(|e| e.to_string())?;
+    stack.push(val).map_err(|e| e.to_string())
+}
+
+/// Rota los tres valores superiores de la pila.
+///
+/// Esta función toma los tres valores superiores de la pila y los rota:
+/// el tercer valor desde la cima se mueve a la cima.
+///
+/// # Parámetros
+/// - `stack`: La pila sobre la que se realizará la operación.
+///
+/// # Retorna
+/// - `Ok(())` si la operación se realizó correctamente.
+/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::stack::Stack;
+/// use taller_tp_individual::interpreter::handle_rot;
+///
+/// let mut stack = Stack::new(10);
+/// stack.push(1).unwrap();
+/// stack.push(2).unwrap();
+/// stack.push(3).unwrap();
+/// handle_rot(&mut stack).unwrap();
+/// assert_eq!(stack.pop().unwrap(), 2);
+/// assert_eq!(stack.pop().unwrap(), 1);
+/// assert_eq!(stack.pop().unwrap(), 3);
+/// ```
+fn handle_rot(stack: &mut Stack) -> Result<(), String> {
+    let c = stack.pop().map_err(|e| e.to_string())?;
+    let b = stack.pop().map_err(|e| e.to_string())?;
+    let a = stack.pop().map_err(|e| e.to_string())?;
+    stack.push(b).map_err(|e| e.to_string())?;
+    stack.push(c).map_err(|e| e.to_string())?;
+    stack.push(a).map_err(|e| e.to_string())
+}
+
+/// Realiza una operación lógica NOT sobre el valor superior de la pila.
+///
+/// Esta función toma el valor superior de la pila y empuja `-1` si el valor es `0`,
+/// o `0` si el valor es diferente de `0`.
+///
+/// # Parámetros
+/// - `stack`: La pila sobre la que se realizará la operación.
+///
+/// # Retorna
+/// - `Ok(())` si la operación se realizó correctamente.
+/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::stack::Stack;
+/// use taller_tp_individual::interpreter::handle_not;
+///
+/// let mut stack = Stack::new(10);
+/// stack.push(0).unwrap();
+/// handle_not(&mut stack).unwrap();
+/// assert_eq!(stack.pop().unwrap(), -1);
+/// ```
+fn handle_not(stack: &mut Stack) -> Result<(), String> {
+    let a = stack.pop()?;
+    let result = if a == 0 { -1 } else { 0 };
+    stack.push(result)
+}
+
+/// Imprime el carácter correspondiente al valor superior de la pila.
+///
+/// Esta función toma el valor superior de la pila, lo interpreta como un código ASCII
+/// y lo imprime como un carácter.
+///
+/// # Parámetros
+/// - `stack`: La pila sobre la que se realizará la operación.
+///
+/// # Retorna
+/// - `Ok(())` si la operación se realizó correctamente.
+/// - `Err(String)` si el valor no es un carácter válido.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::stack::Stack;
+/// use taller_tp_individual::interpreter::handle_emit;
+///
+/// let mut stack = Stack::new(10);
+/// stack.push(65).unwrap(); // Código ASCII de 'A'
+/// handle_emit(&mut stack).unwrap();
+/// // Salida: A
+/// ```
+fn handle_emit(stack: &mut Stack) -> Result<(), String> {
+    let code = stack.pop()?;
+    let c = std::char::from_u32(code as u32)
+        .ok_or_else(|| "Valor para EMIT no es un carácter válido".to_string())?;
+    print!("{} ", c);
+    Ok(())
+}
+
+/// Imprime el valor superior de la pila.
+///
+/// Esta función toma el valor superior de la pila y lo imprime como un número entero.
+///
+/// # Parámetros
+/// - `stack`: La pila sobre la que se realizará la operación.
+///
+/// # Retorna
+/// - `Ok(())` si la operación se realizó correctamente.
+/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::stack::Stack;
+/// use taller_tp_individual::interpreter::handle_dot;
+///
+/// let mut stack = Stack::new(10);
+/// stack.push(42).unwrap();
+/// handle_dot(&mut stack).unwrap();
+/// // Salida: 42
+/// ```
+fn handle_dot(stack: &mut Stack) -> Result<(), String> {
+    let val = stack.pop().map_err(|e| e.to_string())?;
+    print!("{} ", val);
+    Ok(())
+}
+
+/// Imprime un salto de línea.
+///
+/// Esta función imprime un salto de línea en la salida estándar.
+///
+/// # Retorna
+/// - `Ok(())` siempre.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::interpreter::handle_cr;
+///
+/// handle_cr().unwrap();
+/// // Salida: (salto de línea)
+/// ```
+fn handle_cr() -> Result<(), String> {
+    println!();
+    Ok(())
+}
+
 /// Aplica una operación binaria sobre los dos valores superiores de la pila.
-/// 
+///
 /// Retorna `Ok(())` si la operación se aplica correctamente o un `Err` con el mensaje de error.
 fn apply_binary_op<F>(stack: &mut Stack, op: F) -> Result<(), String>
 where

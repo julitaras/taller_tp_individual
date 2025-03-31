@@ -1,5 +1,5 @@
 use std::env;
-use std::fs::{File, remove_file, read_to_string};
+use std::fs::{File, read_to_string, remove_file};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
@@ -584,8 +584,7 @@ fn test_invalid_word_definition() {
 // }
 
 fn read_stack_output() -> Vec<String> {
-    let stack_output = read_to_string("stack.fth")
-        .expect("No se pudo leer el archivo stack.fth");
+    let stack_output = read_to_string("stack.fth").expect("No se pudo leer el archivo stack.fth");
     stack_output
         .lines()
         .map(|l| l.trim().to_string())
@@ -607,7 +606,8 @@ fn run_test_case(test_name: &str, code: &str, expected_stack: &[i16]) {
     let expected_lines: Vec<String> = expected_stack.iter().map(|n| n.to_string()).collect();
     assert_eq!(
         output_lines, expected_lines,
-        "La salida no coincide para el test '{}'", test_name
+        "La salida no coincide para el test '{}'",
+        test_name
     );
     cleanup_temp_file(&temp_file);
     remove_file("stack.fth").expect("No se pudo borrar stack.fth");
@@ -667,7 +667,6 @@ fn test_nested_if_else() {
 fn test_if_non_canonical() {
     run_test_case("if non canonical", ": f if 10 then ;\n5 f", &[10]);
 }
-
 
 // Casos de la catedra - Condicionales
 #[test]
@@ -764,29 +763,31 @@ fn run_test_case_stdout_with_stack_size(
     code: &str,
     expected_output: &str,
     expected_stack: &[i16],
-    stack_size: Option<usize>
+    stack_size: Option<usize>,
 ) {
     let filename = format!("{}.fth", test_name.replace(' ', "_"));
     let temp_file = create_temp_file(&filename, code);
     let stdout_output = run_binary_with_file_and_stack_size(&temp_file, stack_size);
-    
+
     // Normalizamos las salidas
     let normalized_stdout = stdout_output.trim().replace("\r", "");
     let normalized_expected = expected_output.trim().replace("\r", "");
-    
+
     assert_eq!(
         normalized_stdout, normalized_expected,
-        "La salida (stdout) no coincide para el test '{}'", test_name
+        "La salida (stdout) no coincide para el test '{}'",
+        test_name
     );
-    
+
     // Verificamos también el estado final de la pila.
     let output_lines = read_stack_output();
     let expected_lines: Vec<String> = expected_stack.iter().map(|n| n.to_string()).collect();
     assert_eq!(
         output_lines, expected_lines,
-        "El estado final de la pila no coincide para el test '{}'", test_name
+        "El estado final de la pila no coincide para el test '{}'",
+        test_name
     );
-    
+
     cleanup_temp_file(&temp_file);
     remove_file("stack.fth").expect("No se pudo borrar stack.fth");
 }
@@ -889,7 +890,7 @@ fn test_limited_stack() {
         "1 2 3 4 5\n. cr 5 6",
         "5\nstack-overflow\n",
         &[1, 2, 3, 4, 5],
-        Some(10)
+        Some(10),
     );
 }
 
@@ -898,72 +899,37 @@ fn test_limited_stack() {
 // Casos de la catedra - PRINT
 #[test]
 fn test_dot_without_leftover() {
-    run_test_case_stdout(
-        "dot without leftover",
-        "1 2\n. .",
-        "2 1",
-        &[]
-    );
+    run_test_case_stdout("dot without leftover", "1 2\n. .", "2 1", &[]);
 }
 
 #[test]
 fn test_dot_with_leftover() {
-    run_test_case_stdout(
-        "dot with leftover",
-        "1 2 3 4 5\n. . .",
-        "5 4 3",
-        &[1, 2]
-    );
+    run_test_case_stdout("dot with leftover", "1 2 3 4 5\n. . .", "5 4 3", &[1, 2]);
 }
 
 #[test]
 fn test_cr_1() {
-    run_test_case_stdout(
-        "cr 1",
-        "cr",
-        "\n",
-        &[]
-    );
+    run_test_case_stdout("cr 1", "cr", "\n", &[]);
 }
 
 #[test]
 fn test_cr_2() {
-    run_test_case_stdout(
-        "cr 2",
-        "cr cr",
-        "\n\n",
-        &[]
-    );
+    run_test_case_stdout("cr 2", "cr cr", "\n\n", &[]);
 }
 
 #[test]
 fn test_dot_and_cr() {
-    run_test_case_stdout(
-        "dot and cr",
-        "1 .\ncr cr\n2 .",
-        "1\n\n2",
-        &[]
-    );
+    run_test_case_stdout("dot and cr", "1 .\ncr cr\n2 .", "1\n\n2", &[]);
 }
 
 #[test]
 fn test_emit_uppercase() {
-    run_test_case_stdout(
-        "emit uppercase",
-        "65 emit",
-        "A",
-        &[]
-    );
+    run_test_case_stdout("emit uppercase", "65 emit", "A", &[]);
 }
 
 #[test]
 fn test_emit_lowercase() {
-    run_test_case_stdout(
-        "emit lowercase",
-        "97 emit",
-        "a",
-        &[]
-    );
+    run_test_case_stdout("emit lowercase", "97 emit", "a", &[]);
 }
 
 #[test]
@@ -972,7 +938,7 @@ fn test_emit_multiple() {
         "emit multiple",
         "68 67 66 65\nemit emit emit emit",
         "A B C D",
-        &[]
+        &[],
     );
 }
 
@@ -982,7 +948,7 @@ fn test_dot_quote_hello_world() {
         "dot-quote hello world",
         ".\" hello world\"",
         "hello world",
-        &[]
+        &[],
     );
 }
 
@@ -992,7 +958,7 @@ fn test_dot_quote_multiple_whitespace() {
         "dot-quote multiple whitespace",
         ".\" hello      world!\"",
         "hello      world!",
-        &[]
+        &[],
     );
 }
 
@@ -1002,7 +968,7 @@ fn test_dot_quote_multiples() {
         "dot-quote multiples",
         ".\" hello\"\n.\" world\"",
         "hello world",
-        &[]
+        &[],
     );
 }
 
@@ -1012,13 +978,18 @@ fn test_dot_quote_and_cr() {
         "dot-quote and cr",
         ".\" hello\"\ncr\n.\" world\"",
         "hello\nworld",
-        &[]
+        &[],
     );
 }
 
 // Casos de la catedra - VARIED
 /// Función auxiliar para ejecutar un caso de prueba que verifica además la salida estándar.
-fn run_test_case_stdout(test_name: &str, code: &str, expected_output: &str, expected_stack: &[i16]) {
+fn run_test_case_stdout(
+    test_name: &str,
+    code: &str,
+    expected_output: &str,
+    expected_stack: &[i16],
+) {
     let filename = format!("{}.fth", test_name.replace(' ', "_"));
     let temp_file = create_temp_file(&filename, code);
     let stdout_output = run_binary_with_file(&temp_file);
@@ -1039,7 +1010,8 @@ fn run_test_case_stdout(test_name: &str, code: &str, expected_output: &str, expe
     // Comparamos la salida estándar
     assert_eq!(
         normalized_stdout, normalized_expected,
-        "La salida (stdout) no coincide para el test '{}'", test_name
+        "La salida (stdout) no coincide para el test '{}'",
+        test_name
     );
 
     // Verificamos también el estado final de la pila
@@ -1047,7 +1019,8 @@ fn run_test_case_stdout(test_name: &str, code: &str, expected_output: &str, expe
     let expected_lines: Vec<String> = expected_stack.iter().map(|n| n.to_string()).collect();
     assert_eq!(
         output_lines, expected_lines,
-        "El estado final de la pila no coincide para el test '{}'", test_name
+        "El estado final de la pila no coincide para el test '{}'",
+        test_name
     );
 
     // Limpieza de archivos temporales
@@ -1064,7 +1037,7 @@ fn test_unit_computation_1() {
 : decimeter 10 * ;
 : centimeter 1 * ;
 1 meter 5 decimeter 2 centimeter + +",
-        &[152]
+        &[152],
     );
 }
 
@@ -1077,7 +1050,7 @@ fn test_unit_computation_2() {
 : minutes 60 * seconds ;
 : hours 60 * minutes ;
 2 hours 13 minutes 5 seconds + +",
-        &[7985]
+        &[7985],
     );
 }
 
@@ -1099,7 +1072,7 @@ fn test_constant_summation() {
 0
 one16
 add16",
-        &[16]
+        &[16],
     );
 }
 
@@ -1121,7 +1094,7 @@ fn test_linear_summation() {
 0
 next16
 add16",
-        &[136]
+        &[136],
     );
 }
 
@@ -1141,7 +1114,7 @@ fn test_geometric_summation() {
 1
 next8
 add8",
-        &[511]
+        &[511],
     );
 }
 
@@ -1159,7 +1132,7 @@ fn test_power_of_2() {
 1
 next4
 mul4",
-        &[1024]
+        &[1024],
     );
 }
 
@@ -1180,234 +1153,134 @@ fn test_digit_to_string() {
 1 f cr
 2 f cr",
         "zero\none\ntwo",
-        &[]  // Se espera que la pila quede vacía.
+        &[], // Se espera que la pila quede vacía.
     );
 }
 
 // Casos de la catedra - BASSIC
 #[test]
 fn test_positive_numbers() {
-    run_test_case(
-        "positive numbers",
-        "1 2 3 4 5",
-        &[1, 2, 3, 4, 5]
-    );
+    run_test_case("positive numbers", "1 2 3 4 5", &[1, 2, 3, 4, 5]);
 }
 
 #[test]
 fn test_negative_numbers() {
-    run_test_case(
-        "negative numbers",
-        "-1 -2 -3 -4 -5",
-        &[-1, -2, -3, -4, -5]
-    );
+    run_test_case("negative numbers", "-1 -2 -3 -4 -5", &[-1, -2, -3, -4, -5]);
 }
 
 #[test]
 fn test_add_1() {
-    run_test_case(
-        "add 1",
-        "1 2 +",
-        &[3]
-    );
+    run_test_case("add 1", "1 2 +", &[3]);
 }
 
 #[test]
 fn test_add_2() {
-    run_test_case(
-        "add 2",
-        "1 2 3 +",
-        &[1, 5]
-    );
+    run_test_case("add 2", "1 2 3 +", &[1, 5]);
 }
 
 #[test]
 fn test_sub_1() {
-    run_test_case(
-        "sub 1",
-        "3 4 -",
-        &[-1]
-    );
+    run_test_case("sub 1", "3 4 -", &[-1]);
 }
 
 #[test]
 fn test_sub_2() {
-    run_test_case(
-        "sub 2",
-        "1 12 3 -",
-        &[1, 9]
-    );
+    run_test_case("sub 2", "1 12 3 -", &[1, 9]);
 }
 
 #[test]
 fn test_mul_1() {
-    run_test_case(
-        "mul 1",
-        "2 4 *",
-        &[8]
-    );
+    run_test_case("mul 1", "2 4 *", &[8]);
 }
 
 #[test]
 fn test_mul_2() {
-    run_test_case(
-        "mul 2",
-        "1 2 3 *",
-        &[1, 6]
-    );
+    run_test_case("mul 2", "1 2 3 *", &[1, 6]);
 }
 
 #[test]
 fn test_div_1() {
-    run_test_case(
-        "div 1",
-        "12 3 /",
-        &[4]
-    );
+    run_test_case("div 1", "12 3 /", &[4]);
 }
 
 #[test]
 fn test_div_2() {
-    run_test_case(
-        "div 2",
-        "8 3 /",
-        &[2]
-    );
+    run_test_case("div 2", "8 3 /", &[2]);
 }
 
 #[test]
 fn test_div_3() {
-    run_test_case(
-        "div 3",
-        "1 12 3 /",
-        &[1, 4]
-    );
+    run_test_case("div 3", "1 12 3 /", &[1, 4]);
 }
 
 #[test]
 fn test_add_sub() {
-    run_test_case(
-        "add sub",
-        "1 2 + 4 -",
-        &[-1]
-    );
+    run_test_case("add sub", "1 2 + 4 -", &[-1]);
 }
 
 #[test]
 fn test_mul_div() {
-    run_test_case(
-        "mul div",
-        "2 4 * 3 /",
-        &[2]
-    );
+    run_test_case("mul div", "2 4 * 3 /", &[2]);
 }
 
 #[test]
 fn test_mul_add() {
-    run_test_case(
-        "mul add",
-        "1 3 4 * +",
-        &[13]
-    );
+    run_test_case("mul add", "1 3 4 * +", &[13]);
 }
 
 #[test]
 fn test_add_mul() {
-    run_test_case(
-        "add mul",
-        "1 3 4 + *",
-        &[7]
-    );
+    run_test_case("add mul", "1 3 4 + *", &[7]);
 }
 
 #[test]
 fn test_dup_1() {
-    run_test_case(
-        "dup 1",
-        "1 dup",
-        &[1, 1]
-    );
+    run_test_case("dup 1", "1 dup", &[1, 1]);
 }
 
 #[test]
 fn test_dup_2() {
-    run_test_case(
-        "dup 2",
-        "1 2 dup",
-        &[1, 2, 2]
-    );
+    run_test_case("dup 2", "1 2 dup", &[1, 2, 2]);
 }
 
 #[test]
 fn test_drop_1() {
-    run_test_case(
-        "drop 1",
-        "1 drop",
-        &[]
-    );
+    run_test_case("drop 1", "1 drop", &[]);
 }
 
 #[test]
 fn test_drop_2() {
-    run_test_case(
-        "drop 2",
-        "1 2 drop",
-        &[1]
-    );
+    run_test_case("drop 2", "1 2 drop", &[1]);
 }
 
 #[test]
 fn test_swap_1() {
-    run_test_case(
-        "swap 1",
-        "1 2 swap",
-        &[2, 1]
-    );
+    run_test_case("swap 1", "1 2 swap", &[2, 1]);
 }
 
 #[test]
 fn test_swap_2() {
-    run_test_case(
-        "swap 2",
-        "1 2 3 swap",
-        &[1, 3, 2]
-    );
+    run_test_case("swap 2", "1 2 3 swap", &[1, 3, 2]);
 }
 
 #[test]
 fn test_over_1() {
-    run_test_case(
-        "over 1",
-        "1 2 over",
-        &[1, 2, 1]
-    );
+    run_test_case("over 1", "1 2 over", &[1, 2, 1]);
 }
 
 #[test]
 fn test_over_2() {
-    run_test_case(
-        "over 2",
-        "1 2 3 over",
-        &[1, 2, 3, 2]
-    );
+    run_test_case("over 2", "1 2 3 over", &[1, 2, 3, 2]);
 }
 
 #[test]
 fn test_rot_1() {
-    run_test_case(
-        "rot 1",
-        "1 2 3 rot",
-        &[2, 3, 1]
-    );
+    run_test_case("rot 1", "1 2 3 rot", &[2, 3, 1]);
 }
 
 #[test]
 fn test_rot_2() {
-    run_test_case(
-        "rot 2",
-        "1 2 3 rot rot rot",
-        &[1, 2, 3]
-    );
+    run_test_case("rot 2", "1 2 3 rot rot rot", &[1, 2, 3]);
 }
 
 #[test]
@@ -1415,17 +1288,13 @@ fn test_definition_1() {
     run_test_case(
         "definition 1",
         ": dup-twice dup dup ;\n1 dup-twice",
-        &[1, 1, 1]
+        &[1, 1, 1],
     );
 }
 
 #[test]
 fn test_definition_2() {
-    run_test_case(
-        "definition 2",
-        ": countup 1 2 3 ;\ncountup",
-        &[1, 2, 3]
-    );
+    run_test_case("definition 2", ": countup 1 2 3 ;\ncountup", &[1, 2, 3]);
 }
 
 #[test]
@@ -1433,26 +1302,18 @@ fn test_redefinition() {
     run_test_case(
         "redefinition",
         ": foo dup ;\n: foo dup dup ;\n1 foo",
-        &[1, 1, 1]
+        &[1, 1, 1],
     );
 }
 
 #[test]
 fn test_shadowing() {
-    run_test_case(
-        "shadowing",
-        ": swap dup ;\n1 swap",
-        &[1, 1]
-    );
+    run_test_case("shadowing", ": swap dup ;\n1 swap", &[1, 1]);
 }
 
 #[test]
 fn test_shadowing_symbol_1() {
-    run_test_case(
-        "shadowing symbol 1",
-        ": + * ;\n3 4 +",
-        &[12]
-    );
+    run_test_case("shadowing symbol 1", ": + * ;\n3 4 +", &[12]);
 }
 
 #[test]
@@ -1460,35 +1321,23 @@ fn test_non_transitive() {
     run_test_case(
         "non transitive",
         ": foo 5 ;\n: bar foo ;\n: foo 6 ;\nbar foo",
-        &[5, 6]
+        &[5, 6],
     );
 }
 
 #[test]
 fn test_self_definition() {
-    run_test_case(
-        "self definition",
-        ": foo 10 ;\n: foo foo 1 + ;\nfoo",
-        &[11]
-    );
+    run_test_case("self definition", ": foo 10 ;\n: foo foo 1 + ;\nfoo", &[11]);
 }
 
 #[test]
 fn test_case_insensitive_1() {
-    run_test_case(
-        "case insensitive 1",
-        "1 DUP Dup dup",
-        &[1, 1, 1, 1]
-    );
+    run_test_case("case insensitive 1", "1 DUP Dup dup", &[1, 1, 1, 1]);
 }
 
 #[test]
 fn test_case_insensitive_2() {
-    run_test_case(
-        "case insensitive 2",
-        "1 2 3 4 DROP Drop drop",
-        &[1]
-    );
+    run_test_case("case insensitive 2", "1 2 3 4 DROP Drop drop", &[1]);
 }
 
 #[test]
@@ -1496,17 +1345,13 @@ fn test_case_insensitive_3() {
     run_test_case(
         "case insensitive 3",
         "1 2 SWAP 3 Swap 4 swap",
-        &[2, 3, 4, 1]
+        &[2, 3, 4, 1],
     );
 }
 
 #[test]
 fn test_case_insensitive_4() {
-    run_test_case(
-        "case insensitive 4",
-        "1 2 OVER Over over",
-        &[1, 2, 1, 2, 1]
-    );
+    run_test_case("case insensitive 4", "1 2 OVER Over over", &[1, 2, 1, 2, 1]);
 }
 
 #[test]
@@ -1514,7 +1359,7 @@ fn test_case_insensitive_5() {
     run_test_case(
         "case insensitive 5",
         ": foo dup ;\n1 FOO Foo foo",
-        &[1, 1, 1, 1]
+        &[1, 1, 1, 1],
     );
 }
 
@@ -1523,6 +1368,6 @@ fn test_case_insensitive_6() {
     run_test_case(
         "case insensitive 6",
         ": SWAP DUP Dup dup ;\n1 swap",
-        &[1, 1, 1, 1]
+        &[1, 1, 1, 1],
     );
 }

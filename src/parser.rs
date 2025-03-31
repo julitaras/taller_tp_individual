@@ -140,8 +140,7 @@ fn process_word(
             tokens.push(Token::StringLiteral(literal));
         }
         return std::ops::ControlFlow::Break(());
-    }
-    else if word.starts_with(".\" ") {
+    } else if word.starts_with(".\" ") {
         let mut literal = word[3..].to_string();
         if literal.ends_with('"') {
             literal.pop();
@@ -159,8 +158,7 @@ fn process_word(
             }
         }
         return std::ops::ControlFlow::Break(());
-    }
-    else if let Ok(n) = word.parse::<i16>() {
+    } else if let Ok(n) = word.parse::<i16>() {
         tokens.push(Token::Number(n));
     } else {
         tokens.push(Token::Word(word.to_string()));
