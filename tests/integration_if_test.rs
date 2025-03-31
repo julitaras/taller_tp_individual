@@ -1,18 +1,20 @@
 mod common;
 
+use common::run_test_case;
+
 #[test]
 fn test_if_simple() {
-    common::run_test_case("if simple", ": f if 2 then ;\n-1 f", &[2]);
+    run_test_case("if simple", ": f if 2 then ;\n-1 f", &[2]);
 }
 
 #[test]
 fn test_if_else() {
-    common::run_test_case("if else", ": f if 2 else 3 then ;\n-1 f\n0 f", &[2, 3]);
+    run_test_case("if else", ": f if 2 else 3 then ;\n-1 f\n0 f", &[2, 3]);
 }
 
 #[test]
 fn test_nested_if() {
-    common::run_test_case(
+    run_test_case(
         "nested if",
         "\
 : f
@@ -30,7 +32,7 @@ fn test_nested_if() {
 
 #[test]
 fn test_nested_if_else() {
-    common::run_test_case(
+    run_test_case(
         "nested if else",
         "\
 : f
@@ -50,5 +52,5 @@ fn test_nested_if_else() {
 
 #[test]
 fn test_if_non_canonical() {
-    common::run_test_case("if non canonical", ": f if 10 then ;\n5 f", &[10]);
+    run_test_case("if non canonical", ": f if 10 then ;\n5 f", &[10]);
 }

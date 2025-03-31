@@ -1,10 +1,15 @@
 mod common;
 
+use common::cleanup_temp_file;
+use common::create_temp_file;
+use common::run_binary_with_file;
+use common::run_binary_with_file_args;
+
 #[test]
 fn test_emit() {
     let code = "65 EMIT CR";
-    let temp_file = common::create_temp_file("test_emit.fth", code);
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_emit.fth", code);
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
     let expected_lines = vec!["A "];
@@ -15,14 +20,14 @@ fn test_emit() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_cr() {
     let code = "CR";
-    let temp_file = common::create_temp_file("test_cr.fth", code);
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_cr.fth", code);
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().collect();
     let expected_lines = vec![""];
@@ -33,14 +38,14 @@ fn test_cr() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_string_literal() {
     let code = ".\" Hola Mundo\" CR";
-    let temp_file = common::create_temp_file("test_string_literal.fth", code);
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_string_literal.fth", code);
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
     let expected_lines = vec!["Hola Mundo"];
@@ -51,14 +56,14 @@ fn test_string_literal() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_dot() {
     let code = "25 . CR";
-    let temp_file = common::create_temp_file("test_dot.fth", code);
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_dot.fth", code);
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
     let expected_lines = vec!["25 "];
@@ -69,13 +74,13 @@ fn test_dot() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_addition() {
-    let temp_file = common::create_temp_file("test_addition.fth", "25 10 + CR .");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_addition.fth", "25 10 + CR .");
+    let output = run_binary_with_file(&temp_file);
 
     assert!(
         output.contains("\n35"),
@@ -83,13 +88,13 @@ fn test_addition() {
         output
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_subtraction() {
-    let temp_file = common::create_temp_file("test_subtraction.fth", "25 10 - CR .");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_subtraction.fth", "25 10 - CR .");
+    let output = run_binary_with_file(&temp_file);
 
     assert!(
         output.contains("\n15"),
@@ -97,13 +102,13 @@ fn test_subtraction() {
         output
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_multiplication() {
-    let temp_file = common::create_temp_file("test_multiplication.fth", "25 10 * CR .");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_multiplication.fth", "25 10 * CR .");
+    let output = run_binary_with_file(&temp_file);
 
     assert!(
         output.contains("\n250"),
@@ -111,13 +116,13 @@ fn test_multiplication() {
         output
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_division() {
-    let temp_file = common::create_temp_file("test_division.fth", "25 10 / CR .");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_division.fth", "25 10 / CR .");
+    let output = run_binary_with_file(&temp_file);
 
     assert!(
         output.contains("\n2"),
@@ -125,13 +130,13 @@ fn test_division() {
         output
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_dup() {
-    let temp_file = common::create_temp_file("test_dup.fth", "42 DUP . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_dup.fth", "42 DUP . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -145,13 +150,13 @@ fn test_dup() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_drop() {
-    let temp_file = common::create_temp_file("test_drop.fth", "42 10 DROP . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_drop.fth", "42 10 DROP . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -165,13 +170,13 @@ fn test_drop() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_swap() {
-    let temp_file = common::create_temp_file("test_swap.fth", "1 2 SWAP . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_swap.fth", "1 2 SWAP . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -185,13 +190,13 @@ fn test_swap() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_over() {
-    let temp_file = common::create_temp_file("test_over.fth", "10 20 OVER . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_over.fth", "10 20 OVER . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -205,13 +210,13 @@ fn test_over() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_rot() {
-    let temp_file = common::create_temp_file("test_rot.fth", "1 2 3 ROT . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_rot.fth", "1 2 3 ROT . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -225,13 +230,13 @@ fn test_rot() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_equal() {
-    let temp_file = common::create_temp_file("test_equal.fth", "5 5 = . CR\n5 6 = . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_equal.fth", "5 5 = . CR\n5 6 = . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -245,13 +250,13 @@ fn test_equal() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_less_than() {
-    let temp_file = common::create_temp_file("test_less_than.fth", "4 5 < . CR\n5 4 < . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_less_than.fth", "4 5 < . CR\n5 4 < . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -265,13 +270,13 @@ fn test_less_than() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_greater_than() {
-    let temp_file = common::create_temp_file("test_greater_than.fth", "5 4 > . CR\n4 5 > . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_greater_than.fth", "5 4 > . CR\n4 5 > . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -285,13 +290,13 @@ fn test_greater_than() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_and_both_true() {
-    let temp_file = common::create_temp_file("test_and_both_true.fth", "-1 -1 AND . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_and_both_true.fth", "-1 -1 AND . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -305,13 +310,13 @@ fn test_and_both_true() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_and_one_false() {
-    let temp_file = common::create_temp_file("test_and_one_false.fth", "-1 0 AND . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_and_one_false.fth", "-1 0 AND . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -325,13 +330,13 @@ fn test_and_one_false() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_and_both_false() {
-    let temp_file = common::create_temp_file("test_and_both_false.fth", "0 0 AND . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_and_both_false.fth", "0 0 AND . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -345,13 +350,13 @@ fn test_and_both_false() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_or() {
-    let temp_file = common::create_temp_file("test_or.fth", "0 -1 OR . CR\n0 0 OR . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_or.fth", "0 -1 OR . CR\n0 0 OR . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -365,13 +370,13 @@ fn test_or() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_not() {
-    let temp_file = common::create_temp_file("test_not.fth", "0 NOT . CR\n5 NOT . CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_not.fth", "0 NOT . CR\n5 NOT . CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output
         .lines()
@@ -385,38 +390,37 @@ fn test_not() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_if_then() {
-    let temp_file = common::create_temp_file("test_if_then.fth", "1 IF 42 . THEN CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_if_then.fth", "1 IF 42 . THEN CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
     let expected_lines = vec!["42 "];
     assert_eq!(output_lines, expected_lines, "Salida: {:?}", output_lines);
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_if_else_then() {
-    let temp_file =
-        common::create_temp_file("test_if_else_then.fth", "0 IF 42 . ELSE 99 . THEN CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_if_else_then.fth", "0 IF 42 . ELSE 99 . THEN CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
     let expected_lines = vec!["99 "];
     assert_eq!(output_lines, expected_lines, "Salida: {:?}", output_lines);
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_if_then_without_else() {
-    let temp_file = common::create_temp_file("test_if_then_false.fth", "0 IF 42 . THEN CR");
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_if_then_false.fth", "0 IF 42 . THEN CR");
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
     assert!(
@@ -425,7 +429,7 @@ fn test_if_then_without_else() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
@@ -434,8 +438,8 @@ fn test_word_definition() {
 : FOO 100 + ;
 1000 FOO FOO FOO .
 "#;
-    let temp_file = common::create_temp_file("test_definition.fth", code);
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_definition.fth", code);
+    let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<String> = output
         .lines()
@@ -450,57 +454,57 @@ fn test_word_definition() {
         output_lines
     );
 
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_undefined_word() {
     let code = "FOO";
-    let temp_file = common::create_temp_file("test_undefined_word.fth", code);
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_undefined_word.fth", code);
+    let output = run_binary_with_file(&temp_file);
     let expected = "?";
     assert_eq!(output.trim(), expected, "Salida: {:?}", output);
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_division_by_zero() {
     let code = "10 0 /";
-    let temp_file = common::create_temp_file("test_division_by_zero.fth", code);
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_division_by_zero.fth", code);
+    let output = run_binary_with_file(&temp_file);
     let expected = "division-by-zero";
     assert_eq!(output.trim(), expected, "Salida: {:?}", output);
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_stack_underflow() {
     let code = "DROP";
-    let temp_file = common::create_temp_file("test_stack_underflow.fth", code);
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_stack_underflow.fth", code);
+    let output = run_binary_with_file(&temp_file);
     let expected = "stack-underflow";
     assert_eq!(output.trim(), expected, "Salida: {:?}", output);
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_stack_overflow() {
     let code = "1 2 3";
-    let temp_file = common::create_temp_file("test_stack_overflow.fth", code);
-    let output = common::run_binary_with_file_args(&temp_file, &["2"]);
+    let temp_file = create_temp_file("test_stack_overflow.fth", code);
+    let output = run_binary_with_file_args(&temp_file, &["2"]);
     let expected = "stack-overflow";
     assert_eq!(output.trim(), expected, "Salida: {:?}", output);
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 #[test]
 fn test_invalid_word_definition() {
     let code = ": 4 1 ;";
-    let temp_file = common::create_temp_file("test_invalid_word_definition.fth", code);
-    let output = common::run_binary_with_file(&temp_file);
+    let temp_file = create_temp_file("test_invalid_word_definition.fth", code);
+    let output = run_binary_with_file(&temp_file);
     let expected = "invalid-word";
     assert_eq!(output.trim(), expected, "Salida: {:?}", output);
-    common::cleanup_temp_file(&temp_file);
+    cleanup_temp_file(&temp_file);
 }
 
 // Este test tiene una condicion de carrera ya que verifica el archivo stack.fth
@@ -510,8 +514,8 @@ fn test_invalid_word_definition() {
 // 1 2 3 4 5
 // . . CR .
 // "#;
-//     let temp_file = common::create_temp_file("test_output_format.fth", code);
-//     let output = common::run_binary_with_file(&temp_file);
+//     let temp_file = create_temp_file("test_output_format.fth", code);
+//     let output = run_binary_with_file(&temp_file);
 
 //     let output_lines: Vec<String> = output
 //         .lines()
@@ -530,5 +534,5 @@ fn test_invalid_word_definition() {
 //         file_lines
 //     );
 
-//     common::cleanup_temp_file(&temp_file);
+//     cleanup_temp_file(&temp_file);
 // }

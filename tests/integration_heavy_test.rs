@@ -1,8 +1,10 @@
 mod common;
 
+use common::run_test_case_stdout_with_stack_size;
+
 #[test]
 fn test_do_not_clone() {
-    common::run_test_case_stdout_with_stack_size(
+    run_test_case_stdout_with_stack_size(
         "do not clone!",
         r#": word1 1 ;
 : word2 word1 word1 ;
