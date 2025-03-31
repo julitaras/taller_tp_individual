@@ -69,21 +69,30 @@ pub fn execute_tokens<'a>(
 ) -> Result<(), String> {
     let mut i = 0;
     while i < tokens.len() {
-        match &tokens[i] {
-            Word::Number(n) => {
-                handle_number(stack, *n)?;
-                i += 1;
-            }
-            Word::StringLiteral(s) => {
-                handle_string_literal(s);
-                i += 1;
-            }
-            Word::Words(word) => {
-                i = handle_word_token(stack, word, tokens, i, dict)?;
-            }
-        }
+        i = execute_token(stack, &tokens[i], tokens, i, dict)?;
     }
     Ok(())
+}
+
+/// Ejecuta un único token.
+fn execute_token<'a>(
+    stack: &mut Stack,
+    token: &Word,
+    tokens: &'a [Word],
+    i: usize,
+    dict: &mut HashMap<String, &'a [Word]>,
+) -> Result<usize, String> {
+    match token {
+        Word::Number(n) => {
+            handle_number(stack, *n)?;
+            Ok(i + 1)
+        }
+        Word::StringLiteral(s) => {
+            handle_string_literal(s);
+            Ok(i + 1)
+        }
+        Word::Words(word) => handle_word_token(stack, word, tokens, i, dict),
+    }
 }
 
 /// Maneja un número entero.
@@ -170,16 +179,18 @@ fn handle_word_token<'a>(
     dict: &mut HashMap<String, &'a [Word]>,
 ) -> Result<usize, String> {
     let word_upper = word.to_uppercase();
-    if word_upper == ":" {
-        handle_definition(tokens, i, dict)
-    } else if let Some(def_tokens) = dict.get(&word_upper) {
-        execute_tokens(stack, def_tokens, dict)?;
-        Ok(i + 1)
-    } else if word_upper == "IF" {
-        execute_conditional(stack, tokens, i, dict)
-    } else {
-        handle_word(stack, word)?;
-        Ok(i + 1)
+    match word_upper.as_str() {
+        ":" => handle_definition(tokens, i, dict),
+        "IF" => execute_conditional(stack, tokens, i, dict),
+        _ => {
+            if let Some(def_tokens) = dict.get(&word_upper) {
+                execute_tokens(stack, def_tokens, dict)?;
+                Ok(i + 1)
+            } else {
+                handle_word(stack, &word_upper)?;
+                Ok(i + 1)
+            }
+        }
     }
 }
 
@@ -221,33 +232,30 @@ fn handle_definition<'a>(
     dict: &mut HashMap<String, &'a [Word]>,
 ) -> Result<usize, String> {
     i += 1;
-    if i >= tokens.len() {
-        return Err("invalid-word".to_string());
-    }
-    let name_token = &tokens[i];
-    let name = if let Word::Words(w) = name_token {
-        w.to_uppercase()
-    } else {
-        return Err("invalid-word".to_string());
-    };
-    if name.parse::<i16>().is_ok() {
-        return Err("invalid-word".to_string());
-    }
+    let name = extract_word_name(tokens, i)?;
     i += 1;
+
     let start = i;
     while i < tokens.len() {
         if let Word::Words(ref w) = tokens[i] {
             if w.to_uppercase() == ";" {
-                break;
+                dict.insert(name, &tokens[start..i]);
+                return Ok(i + 1);
             }
         }
         i += 1;
     }
-    if i == tokens.len() {
-        return Err("invalid-word".to_string());
+
+    Err("Definition missing closing ;".to_string())
+}
+
+fn extract_word_name(tokens: &[Word], i: usize) -> Result<String, String> {
+    if let Some(Word::Words(w)) = tokens.get(i) {
+        if w.parse::<i16>().is_err() {
+            return Ok(w.to_uppercase());
+        }
     }
-    dict.insert(name, &tokens[start..i]); // Almacena una referencia al slice
-    Ok(i + 1)
+    Err("Invalid word name".to_string())
 }
 
 /// Ejecuta una estructura condicional en el lenguaje Forth.
@@ -291,18 +299,17 @@ fn execute_conditional<'a>(
     dict: &mut HashMap<String, &'a [Word]>,
 ) -> Result<usize, String> {
     let (else_index, then_index) = find_else_then_indices(tokens, if_index)?;
+    let cond = stack.pop()? != 0;
 
-    let cond = stack.pop()?;
-    let condition_true = cond != 0;
-
-    if condition_true {
-        let end = else_index.unwrap_or(then_index);
-        let branch_tokens = &tokens[if_index + 1..end];
-        execute_tokens(stack, branch_tokens, dict)?;
+    let branch_tokens = if cond {
+        &tokens[if_index + 1..else_index.unwrap_or(then_index)]
     } else if let Some(e_idx) = else_index {
-        let branch_tokens = &tokens[e_idx + 1..then_index];
-        execute_tokens(stack, branch_tokens, dict)?;
-    }
+        &tokens[e_idx + 1..then_index]
+    } else {
+        &[]
+    };
+
+    execute_tokens(stack, branch_tokens, dict)?;
     Ok(then_index + 1)
 }
 
