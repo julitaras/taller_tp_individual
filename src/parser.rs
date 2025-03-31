@@ -29,7 +29,7 @@ fn process_word(
         let mut string = String::new();
         let mut token_content = stripped.to_string();
         if token_content.ends_with('"') {
-            token_content.pop(); // Elimina el sufijo '"' si está presente
+            token_content.pop();
             tokens.push(Token::StringLiteral(token_content));
             return ControlFlow::Break(());
         } else {

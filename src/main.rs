@@ -12,7 +12,13 @@ use std::path::PathBuf;
 
 fn main() {
     let (filename, stack_size) = parse_args();
-    let code = read_file(&filename);
+    let code = match read_file(&filename) {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    };
     let tokens = tokenize(&code);
 
     let mut stack = Stack::new(stack_size);
@@ -42,8 +48,8 @@ fn parse_args() -> (String, usize) {
     (filename, stack_size)
 }
 
-fn read_file(filename: &str) -> String {
-    fs::read_to_string(filename).expect("No se pudo leer el archivo")
+fn read_file(filename: &str) -> Result<String, String> {
+    fs::read_to_string(filename).map_err(|e| format!("No se pudo leer el archivo: {}", e))
 }
 
 fn save_stack_to_file(stack: &Stack, filename: &str) -> Result<(), String> {
