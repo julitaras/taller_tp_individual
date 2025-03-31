@@ -23,13 +23,13 @@ fn run_binary_with_file(file_path: &PathBuf) -> String {
 
 /// Ejecuta el binario pasando el archivo de código (y opcionalmente el tamaño de la pila)
 /// y retorna la salida estándar.
-fn run_binary_with_file_and_stack_size(file_path: &PathBuf, stack_size: Option<usize>) -> String {
+fn run_binary_with_file_and_stack_size(file_path: &PathBuf, stack_size: &str) -> String {
     let bin_path = env!("CARGO_BIN_EXE_taller_tp_individual");
     let mut cmd = Command::new(bin_path);
     cmd.arg(file_path);
-    if let Some(size) = stack_size {
-        cmd.arg(size.to_string());
-    }
+
+    cmd.arg(stack_size);
+
     let output = cmd.output().expect("Fallo al ejecutar el comando");
     String::from_utf8_lossy(&output.stdout).to_string()
 }
@@ -537,7 +537,7 @@ fn test_stack_underflow() {
 fn test_stack_overflow() {
     let code = "1 2 3";
     let temp_file = create_temp_file("test_stack_overflow.fth", code);
-    let output = run_binary_with_file_args(&temp_file, &["2"]); // Pasa "2" como stack_size
+    let output = run_binary_with_file_args(&temp_file, &["2"]);
     let expected = "stack-overflow";
     assert_eq!(output.trim(), expected, "Salida: {:?}", output);
     cleanup_temp_file(&temp_file);
@@ -763,7 +763,7 @@ fn run_test_case_stdout_with_stack_size(
     code: &str,
     expected_output: &str,
     expected_stack: &[i16],
-    stack_size: Option<usize>,
+    stack_size: &str,
 ) {
     let filename = format!("{}.fth", test_name.replace(' ', "_"));
     let temp_file = create_temp_file(&filename, code);
@@ -890,7 +890,7 @@ fn test_limited_stack() {
         "1 2 3 4 5\n. cr 5 6",
         "5\nstack-overflow\n",
         &[1, 2, 3, 4, 5],
-        Some(10),
+        "10",
     );
 }
 

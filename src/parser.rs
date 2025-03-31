@@ -23,7 +23,7 @@
 //! ]);
 //! ```
 
-use std::ops::ControlFlow;
+// use std::ops::ControlFlow;
 
 /// Representa un token del lenguaje Forth.
 ///
@@ -78,15 +78,68 @@ pub enum Token {
 /// ```
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
-    let mut iter = input.split_whitespace().peekable();
-
-    while let Some(word) = iter.next() {
-        if let ControlFlow::Break(_) = process_word(&mut tokens, &mut iter, word) {
+    let chars: Vec<char> = input.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        // Saltar espacios fuera de tokens
+        if chars[i].is_whitespace() {
+            i += 1;
             continue;
         }
+        // Si se detecta un literal a partir de la secuencia exacta: ."
+        // Según la documentación, debe reconocerse a partir de: .\"<espacio>
+        if i + 2 < chars.len() && chars[i] == '.' && chars[i + 1] == '"' && chars[i + 2] == ' ' {
+            i += 3; // saltamos .", y el espacio
+            let start = i;
+            while i < chars.len() && chars[i] != '"' {
+                i += 1;
+            }
+            if i < chars.len() && chars[i] == '"' {
+                let literal: String = chars[start..i].iter().collect();
+                tokens.push(Token::StringLiteral(literal));
+                i += 1; // saltamos la comilla de cierre
+            } else {
+                // Literal sin cierre: se retorna vector vacío
+                return Vec::new();
+            }
+        } else {
+            // Caso normal: acumulamos un token hasta el siguiente espacio
+            let start = i;
+            while i < chars.len() && !chars[i].is_whitespace() {
+                i += 1;
+            }
+            let token_str: String = chars[start..i].iter().collect();
+            if let Ok(n) = token_str.parse::<i16>() {
+                tokens.push(Token::Number(n));
+            } else {
+                tokens.push(Token::Word(token_str));
+            }
+        }
     }
-
-    tokens
+    // Si hay literales consecutivos, los fusionamos insertando un espacio entre ellos.
+    let mut merged = Vec::new();
+    let mut i = 0;
+    while i < tokens.len() {
+        if let Token::StringLiteral(s) = &tokens[i] {
+            let mut combined = s.clone();
+            i += 1;
+            while i < tokens.len() {
+                if let Token::StringLiteral(s2) = &tokens[i] {
+                    // Se inserta un espacio entre literales consecutivos
+                    combined.push(' ');
+                    combined.push_str(s2);
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
+            merged.push(Token::StringLiteral(combined));
+        } else {
+            merged.push(tokens[i].clone());
+            i += 1;
+        }
+    }
+    merged
 }
 
 /// Procesa un token de entrada y lo agrega al vector de tokens.
@@ -113,67 +166,64 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 /// process_word(&mut tokens, &mut iter, "42");
 /// assert_eq!(tokens, vec![Token::Number(42)]);
 /// ```
-fn process_word(
-    tokens: &mut Vec<Token>,
-    iter: &mut std::iter::Peekable<std::str::SplitWhitespace<'_>>,
-    word: &str,
-) -> std::ops::ControlFlow<()> {
-    if word == ".\"" {
-        let mut literal = String::new();
-        let mut found_end = false;
+// fn process_word(
+//     tokens: &mut Vec<Token>,
+//     iter: &mut std::iter::Peekable<std::str::SplitWhitespace<'_>>,
+//     word: &str,
+// ) -> std::ops::ControlFlow<()> {
+//     if word == ".\"" {
+//         let mut literal = String::new();
+//         let mut found_end = false;
 
-        // Cambiar `while let` a `for` loop
-        for next_token in iter.by_ref() {
-            if next_token.ends_with('"') {
-                if !literal.is_empty() {
-                    literal.push(' ');
-                }
-                literal.push_str(next_token.trim_end_matches('"'));
-                found_end = true;
-                break;
-            } else {
-                if !literal.is_empty() {
-                    literal.push(' ');
-                }
-                literal.push_str(next_token);
-            }
-        }
+//         for next_token in iter.by_ref() {
+//             if next_token.ends_with('"') {
+//                 if !literal.is_empty() {
+//                     literal.push(' ');
+//                 }
+//                 literal.push_str(next_token.trim_end_matches('"'));
+//                 found_end = true;
+//                 break;
+//             } else {
+//                 if !literal.is_empty() {
+//                     literal.push(' ');
+//                 }
+//                 literal.push_str(next_token);
+//             }
+//         }
 
-        if found_end {
-            tokens.push(Token::StringLiteral(literal));
-        }
-        return std::ops::ControlFlow::Break(());
-    } else if let Some(stripped) = word.strip_prefix(".\" ") {
-        // Usar `strip_prefix` en lugar de manipular manualmente el prefijo
-        let mut literal = stripped.to_string();
+//         if found_end {
+//             tokens.push(Token::StringLiteral(literal));
+//         }
+//         return std::ops::ControlFlow::Break(());
+//     } else if let Some(stripped) = word.strip_prefix(".\" ") {
+//         let mut literal = stripped.to_string();
 
-        if literal.ends_with('"') {
-            literal.pop();
-            tokens.push(Token::StringLiteral(literal));
-            return std::ops::ControlFlow::Break(());
-        }
+//         if literal.ends_with('"') {
+//             literal.pop();
+//             tokens.push(Token::StringLiteral(literal));
+//             return std::ops::ControlFlow::Break(());
+//         }
 
-        // Cambiar `while let` a `for` loop
-        for next_token in iter.by_ref() {
-            literal.push(' ');
-            if next_token.ends_with('"') {
-                literal.push_str(next_token.trim_end_matches('"'));
-                tokens.push(Token::StringLiteral(literal));
-                return std::ops::ControlFlow::Break(());
-            } else {
-                literal.push_str(next_token);
-            }
-        }
+//         for next_token in iter.by_ref() {
+//             literal.push(' ');
+//             if next_token.ends_with('"') {
+//                 literal.push_str(next_token.trim_end_matches('"'));
+//                 tokens.push(Token::StringLiteral(literal));
+//                 return std::ops::ControlFlow::Break(());
+//             } else {
+//                 literal.push_str(next_token);
+//             }
+//         }
 
-        return std::ops::ControlFlow::Break(());
-    } else if let Ok(n) = word.parse::<i16>() {
-        tokens.push(Token::Number(n));
-    } else {
-        tokens.push(Token::Word(word.to_string()));
-    }
+//         return std::ops::ControlFlow::Break(());
+//     } else if let Ok(n) = word.parse::<i16>() {
+//         tokens.push(Token::Number(n));
+//     } else {
+//         tokens.push(Token::Word(word.to_string()));
+//     }
 
-    std::ops::ControlFlow::Continue(())
-}
+//     std::ops::ControlFlow::Continue(())
+// }
 
 #[cfg(test)]
 mod tests {
