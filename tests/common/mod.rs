@@ -15,7 +15,6 @@ pub fn run_test_case_stdout_with_stack_size(
     let temp_file = create_temp_file(&filename, code);
     let stdout_output = run_binary_with_file_and_stack_size(&temp_file, stack_size);
 
-    // Normalizamos las salidas
     let normalized_stdout = stdout_output.trim().replace("\r", "");
     let normalized_expected = expected_output.trim().replace("\r", "");
 
@@ -25,7 +24,6 @@ pub fn run_test_case_stdout_with_stack_size(
         test_name
     );
 
-    // Verificamos también el estado final de la pila.
     let output_lines = read_stack_output();
     let expected_lines: Vec<String> = expected_stack.iter().map(|n| n.to_string()).collect();
     assert_eq!(
@@ -38,7 +36,7 @@ pub fn run_test_case_stdout_with_stack_size(
     remove_file("stack.fth").expect("No se pudo borrar stack.fth");
 }
 
-pub fn read_stack_output() -> Vec<String> {
+fn read_stack_output() -> Vec<String> {
     let stack_output = read_to_string("stack.fth").expect("No se pudo leer el archivo stack.fth");
     stack_output
         .lines()
