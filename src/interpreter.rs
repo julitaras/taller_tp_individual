@@ -27,7 +27,7 @@
 //!  }
 //! ```
 
-use crate::parser::Token;
+use crate::parser::Word;
 use crate::stack::Stack;
 use std::collections::HashMap;
 
@@ -64,21 +64,21 @@ use std::collections::HashMap;
 /// ```
 pub fn execute_tokens<'a>(
     stack: &mut Stack,
-    tokens: &'a [Token],
-    dict: &mut HashMap<String, &'a [Token]>,
+    tokens: &'a [Word],
+    dict: &mut HashMap<String, &'a [Word]>,
 ) -> Result<(), String> {
     let mut i = 0;
     while i < tokens.len() {
         match &tokens[i] {
-            Token::Number(n) => {
+            Word::Number(n) => {
                 handle_number(stack, *n)?;
                 i += 1;
             }
-            Token::StringLiteral(s) => {
+            Word::StringLiteral(s) => {
                 handle_string_literal(s);
                 i += 1;
             }
-            Token::Word(word) => {
+            Word::Words(word) => {
                 i = handle_word_token(stack, word, tokens, i, dict)?;
             }
         }
@@ -165,9 +165,9 @@ fn handle_string_literal(s: &str) {
 fn handle_word_token<'a>(
     stack: &mut Stack,
     word: &str,
-    tokens: &'a [Token],
+    tokens: &'a [Word],
     i: usize,
-    dict: &mut HashMap<String, &'a [Token]>,
+    dict: &mut HashMap<String, &'a [Word]>,
 ) -> Result<usize, String> {
     let word_upper = word.to_uppercase();
     if word_upper == ":" {
@@ -216,16 +216,16 @@ fn handle_word_token<'a>(
 /// assert!(dictionary.contains_key("SQUARE"));
 /// ```
 fn handle_definition<'a>(
-    tokens: &'a [Token],
+    tokens: &'a [Word],
     mut i: usize,
-    dict: &mut HashMap<String, &'a [Token]>,
+    dict: &mut HashMap<String, &'a [Word]>,
 ) -> Result<usize, String> {
     i += 1;
     if i >= tokens.len() {
         return Err("invalid-word".to_string());
     }
     let name_token = &tokens[i];
-    let name = if let Token::Word(w) = name_token {
+    let name = if let Word::Words(w) = name_token {
         w.to_uppercase()
     } else {
         return Err("invalid-word".to_string());
@@ -236,7 +236,7 @@ fn handle_definition<'a>(
     i += 1;
     let start = i;
     while i < tokens.len() {
-        if let Token::Word(ref w) = tokens[i] {
+        if let Word::Words(ref w) = tokens[i] {
             if w.to_uppercase() == ";" {
                 break;
             }
@@ -286,9 +286,9 @@ fn handle_definition<'a>(
 /// ```
 fn execute_conditional<'a>(
     stack: &mut Stack,
-    tokens: &'a [Token],
+    tokens: &'a [Word],
     if_index: usize,
-    dict: &mut HashMap<String, &'a [Token]>,
+    dict: &mut HashMap<String, &'a [Word]>,
 ) -> Result<usize, String> {
     let (else_index, then_index) = find_else_then_indices(tokens, if_index)?;
 
@@ -310,14 +310,14 @@ fn execute_conditional<'a>(
 ///
 /// Retorna una tupla `(else_index, then_index)`.
 fn find_else_then_indices(
-    tokens: &[Token],
+    tokens: &[Word],
     if_index: usize,
 ) -> Result<(Option<usize>, usize), String> {
     // Devuelve (opcional_else_index, then_index)
     let mut nest = 0;
     let mut else_index = None;
     for (j, token) in tokens.iter().enumerate().skip(if_index + 1) {
-        if let Token::Word(w) = token {
+        if let Word::Words(w) = token {
             let w_upper = w.to_uppercase();
             if w_upper == "IF" {
                 nest += 1;

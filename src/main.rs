@@ -23,7 +23,7 @@ mod parser;
 mod stack;
 
 use interpreter::execute_tokens;
-use parser::{Token, tokenize};
+use parser::{Word, tokenize};
 use stack::Stack;
 use std::collections::HashMap;
 use std::env;
@@ -59,7 +59,7 @@ fn main() {
     let tokens = tokenize(&code);
 
     let mut stack = Stack::new(stack_size);
-    let mut dictionary: HashMap<String, &[Token]> = HashMap::new();
+    let mut dictionary: HashMap<String, &[Word]> = HashMap::new();
 
     if let Err(e) = execute_tokens(&mut stack, &tokens, &mut dictionary) {
         print!("{}", e);
