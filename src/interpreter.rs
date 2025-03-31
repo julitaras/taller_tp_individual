@@ -1,12 +1,11 @@
 use crate::parser::Token;
 use crate::stack::Stack;
 use std::collections::HashMap;
-use std::ops::ControlFlow;
 
-pub fn execute_tokens(
+pub fn execute_tokens<'a>(
     stack: &mut Stack,
-    tokens: Vec<Token>,
-    dict: &mut HashMap<String, Vec<Token>>,
+    tokens: &'a [Token],
+    dict: &mut HashMap<String, &'a [Token]>,
 ) -> Result<(), String> {
     let mut i = 0;
     while i < tokens.len() {
@@ -20,7 +19,7 @@ pub fn execute_tokens(
                 i += 1;
             }
             Token::Word(word) => {
-                i = handle_word_token(stack, word, &tokens, i, dict)?;
+                i = handle_word_token(stack, word, tokens, i, dict)?;
             }
         }
     }
@@ -35,18 +34,18 @@ fn handle_string_literal(s: &str) {
     print!("{}", s);
 }
 
-fn handle_word_token(
+fn handle_word_token<'a>(
     stack: &mut Stack,
     word: &str,
-    tokens: &[Token],
+    tokens: &'a [Token],
     i: usize,
-    dict: &mut HashMap<String, Vec<Token>>,
+    dict: &mut HashMap<String, &'a [Token]>,
 ) -> Result<usize, String> {
     let word_upper = word.to_uppercase();
     if word_upper == ":" {
         handle_definition(tokens, i, dict)
     } else if let Some(def_tokens) = dict.get(&word_upper) {
-        execute_tokens(stack, def_tokens.clone(), dict)?;
+        execute_tokens(stack, def_tokens, dict)?;
         Ok(i + 1)
     } else if word_upper == "IF" {
         execute_conditional(stack, tokens, i, dict)
@@ -56,10 +55,10 @@ fn handle_word_token(
     }
 }
 
-fn handle_definition(
-    tokens: &[Token],
+fn handle_definition<'a>(
+    tokens: &'a [Token],
     mut i: usize,
-    dict: &mut HashMap<String, Vec<Token>>,
+    dict: &mut HashMap<String, &'a [Token]>,
 ) -> Result<usize, String> {
     i += 1;
     if i >= tokens.len() {
@@ -75,40 +74,27 @@ fn handle_definition(
         return Err("invalid-word".to_string());
     }
     i += 1;
-    let mut definition = Vec::new();
+    let start = i;
     while i < tokens.len() {
-        if let ControlFlow::Break(_) = parse_token_body(tokens, &mut i, &mut definition) {
-            break;
+        if let Token::Word(ref w) = tokens[i] {
+            if w.to_uppercase() == ";" {
+                break;
+            }
         }
+        i += 1;
     }
     if i == tokens.len() {
         return Err("invalid-word".to_string());
     }
-    i += 1;
-    dict.insert(name, definition);
-    Ok(i)
+    dict.insert(name, &tokens[start..i]); // Almacena una referencia al slice
+    Ok(i + 1)
 }
 
-fn parse_token_body(
-    tokens: &[Token],
-    i: &mut usize,
-    definition: &mut Vec<Token>,
-) -> ControlFlow<()> {
-    if let Token::Word(ref w) = tokens[*i] {
-        if w.to_uppercase() == ";" {
-            return ControlFlow::Break(());
-        }
-    }
-    definition.push(tokens[*i].clone());
-    *i += 1;
-    ControlFlow::Continue(())
-}
-
-fn execute_conditional(
+fn execute_conditional<'a>(
     stack: &mut Stack,
-    tokens: &[Token],
+    tokens: &'a [Token],
     if_index: usize,
-    dict: &mut HashMap<String, Vec<Token>>,
+    dict: &mut HashMap<String, &'a [Token]>,
 ) -> Result<usize, String> {
     let (else_index, then_index) = find_else_then_indices(tokens, if_index)?;
 
@@ -118,10 +104,10 @@ fn execute_conditional(
     let then_idx = then_index.unwrap();
     if condition_true {
         let end = else_index.unwrap_or(then_idx);
-        let branch_tokens = tokens[if_index + 1..end].to_vec();
+        let branch_tokens = &tokens[if_index + 1..end];
         execute_tokens(stack, branch_tokens, dict)?;
     } else if let Some(else_idx) = else_index {
-        let branch_tokens = tokens[else_idx + 1..then_idx].to_vec();
+        let branch_tokens = &tokens[else_idx + 1..then_idx];
         execute_tokens(stack, branch_tokens, dict)?;
     }
     Ok(then_idx + 1)

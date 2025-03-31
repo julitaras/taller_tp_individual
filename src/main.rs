@@ -22,9 +22,10 @@ fn main() {
     let tokens = tokenize(&code);
 
     let mut stack = Stack::new(stack_size);
-    let mut dictionary: HashMap<String, Vec<Token>> = HashMap::new();
+    let mut dictionary: HashMap<String, &[Token]> = HashMap::new(); // Cambia Vec<Token> a &[Token]
 
-    if let Err(e) = execute_tokens(&mut stack, tokens, &mut dictionary) {
+    // Pasa un slice de tokens en lugar de un Vec<Token>
+    if let Err(e) = execute_tokens(&mut stack, &tokens, &mut dictionary) {
         print!("{}", e);
         std::process::exit(1);
     }
