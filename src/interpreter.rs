@@ -1,781 +1,544 @@
-//! Módulo del intérprete Forth.
+//! Módulo para la implementación de un intérprete del lenguaje Forth.
 //!
-//! Este módulo implementa la lógica principal del intérprete para el lenguaje Forth.
-//! Proporciona funciones para ejecutar tokens, manejar definiciones de palabras (words),
-//! estructuras condicionales y operaciones aritméticas y lógicas.
+//! Este módulo proporciona la estructura `Interpreter`, que implementa un intérprete
+//! para el lenguaje Forth. El intérprete incluye un diccionario de words predefinidas,
+//! una pila para operaciones, y soporte para definir nuevas words y ejecutar código Forth.
 //!
-//! # Funcionalidades principales
-//! - Ejecución de tokens (`execute_tokens`).
-//! - Definición de palabras personalizadas (`handle_definition`).
-//! - Manejo de estructuras condicionales (`execute_conditional`).
-//! - Ejecución de operaciones aritméticas y lógicas (`handle_word`).
+//! # Características principales
+//! - **Operaciones aritméticas**: Soporte para `+`, `-`, `*`, `/`.
+//! - **Operaciones de pila**: Soporte para `DUP`, `SWAP`, `DROP`, `ROT`, `OVER`.
+//! - **Operaciones lógicas**: Soporte para `NOT`, `AND`, `OR`, `=`, `<`, `>`.
+//! - **Control de flujo**: Soporte para estructuras condicionales como `IF`, `ELSE`, `THEN`.
+//! - **Operaciones de salida**: Soporte para imprimir valores (`.`), cadenas (`."`), y caracteres (`EMIT`).
 //!
 //! # Ejemplo de uso
 //! ```rust
-//! use taller_tp_individual::interpreter::execute_tokens;
-//! use taller_tp_individual::parser::Token;
-//! use taller_tp_individual::stack::Stack;
-//! use std::collections::HashMap;
+//! use taller_tp_individual::interpreter::Interpreter;
 //!
-//! let mut stack = Stack::new(10);
-//! let tokens = vec![Token::Number(1), Token::Number(2), Token::Word("+".to_string())];
-//! let mut dictionary = HashMap::new();
-//!
-//! if let Err(e) = execute_tokens(&mut stack, &tokens, &mut dictionary) {
-//!        print!("{}", e);
-//!        std::process::exit(1);
-//!  }
+//! let mut interpreter = Interpreter::new(1024);
+//! interpreter.parse_line("1 2 + .").unwrap(); // Imprime "3"
+//! interpreter.parse_line(": SQUARE DUP * ;").unwrap(); // Define una nueva word
+//! interpreter.parse_line("3 SQUARE .").unwrap(); // Imprime "9"
 //! ```
 
-use crate::parser::Word;
 use crate::stack::Stack;
+use crate::word::Word;
 use std::collections::HashMap;
+use std::rc::Rc;
 
-/// Ejecuta una secuencia de tokens sobre la pila utilizando el diccionario para definiciones.
+/// Representa el estado del intérprete.
 ///
-/// Esta función procesa cada token en el orden en que aparece y realiza la operación correspondiente:
-/// - Empuja números a la pila.
-/// - Ejecuta palabras definidas en el diccionario.
-/// - Maneja literales de cadena.
-/// - Ejecuta operaciones aritméticas, lógicas y condicionales.
-///
-/// # Parámetros
-/// - `stack`: Pila sobre la que se realizarán las operaciones.
-/// - `tokens`: Slice de tokens obtenido a partir del código fuente.
-/// - `dict`: Diccionario que mapea nombres de palabras (words) a slices de tokens (sus definiciones).
-///
-/// # Retorna
-/// - `Ok(())` si la ejecución se realizó sin errores.
-/// - `Err(String)` si ocurre algún error durante la ejecución.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::interpreter::execute_tokens;
-/// use taller_tp_individual::parser::Token;
-/// use taller_tp_individual::stack::Stack;
-/// use std::collections::HashMap;
-///
-/// let mut stack = Stack::new(10);
-/// let tokens = vec![Token::Number(1), Token::Number(2), Token::Word("+".to_string())];
-/// let mut dictionary = HashMap::new();
-///
-/// execute_tokens(&mut stack, &tokens, &mut dictionary).unwrap();
-/// assert_eq!(stack.pop().unwrap(), 3);
-/// ```
-pub fn execute_tokens<'a>(
-    stack: &mut Stack,
-    tokens: &'a [Word],
-    dict: &mut HashMap<String, &'a [Word]>,
-) -> Result<(), String> {
-    let mut i = 0;
-    while i < tokens.len() {
-        i = execute_token(stack, &tokens[i], tokens, i, dict)?;
-    }
-    Ok(())
+/// El intérprete incluye una pila (`stack`), un diccionario de words (`dict`),
+/// y soporte para definir nuevas words (`compiling`). También mantiene un
+/// conjunto de tokens (`tokens`) y un índice de token actual (`token_index`) para
+/// procesar líneas de entrada.
+pub struct Interpreter {
+    /// Pila utilizada para las operaciones.
+    stack: Stack,
+    /// Diccionario de words predefinidas y definidas por el usuario.
+    dict: HashMap<String, Rc<Word>>,
+    /// Estado de compilación para definir nuevas words.
+    compiling: Option<(String, Vec<Rc<Word>>)>,
+    /// Tokens de la línea actual.
+    tokens: Vec<String>,
+    /// Índice del token actual.
+    token_index: usize,
 }
 
-/// Ejecuta un único token.
-fn execute_token<'a>(
-    stack: &mut Stack,
-    token: &Word,
-    tokens: &'a [Word],
-    i: usize,
-    dict: &mut HashMap<String, &'a [Word]>,
-) -> Result<usize, String> {
-    match token {
-        Word::Number(n) => {
-            handle_number(stack, *n)?;
-            Ok(i + 1)
-        }
-        Word::StringLiteral(s) => {
-            handle_string_literal(s);
-            Ok(i + 1)
-        }
-        Word::Words(word) => handle_word_token(stack, word, tokens, i, dict),
-    }
-}
+impl Interpreter {
+    /// Crea un nuevo intérprete con una pila de tamaño especificado.
+    ///
+    /// # Ejemplo
+    /// ```rust
+    /// use taller_tp_individual::interpreter::Interpreter;
+    ///
+    /// let interpreter = Interpreter::new(1024);
+    /// ```
+    pub fn new(stack_size: usize) -> Self {
+        let mut interpreter = Self {
+            stack: Stack::new(stack_size),
+            dict: HashMap::new(),
+            compiling: None,
+            token_index: 0,
+            tokens: Vec::new(),
+        };
 
-/// Maneja un número entero.
-///
-/// Esta función empuja un número entero (`Number`) a la pila.
-///
-/// # Parámetros
-/// - `stack`: Pila sobre la que se realizará la operación.
-/// - `number`: El número entero a empujar.
-///
-/// # Retorna
-/// - `Ok(())`: Si el número se empujó correctamente a la pila.
-/// - `Err(String)`: Si ocurre un error al empujar el número.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::interpreter::handle_number;
-/// use taller_tp_individual::stack::Stack;
-///
-/// let mut stack = Stack::new(10);
-/// handle_number(&mut stack, 42).unwrap();
-/// assert_eq!(stack.pop().unwrap(), 42);
-/// ```
-fn handle_number(stack: &mut Stack, number: i16) -> Result<(), String> {
-    stack.push(number)
-}
+        interpreter.register_builtin_operations();
 
-/// Maneja un literal de cadena.
-///
-/// Esta función imprime el contenido de un literal de cadena (`StringLiteral`) en la salida estándar.
-///
-/// # Parámetros
-/// - `s`: El literal de cadena a imprimir.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::interpreter::handle_string_literal;
-///
-/// handle_string_literal("Hello, World!");
-/// // Salida: Hello, World!
-/// ```
-fn handle_string_literal(s: &str) {
-    print!("{}", s);
-}
-
-/// Procesa un token de tipo `Word`.
-///
-/// Esta función maneja palabras (`Word`) en el lenguaje Forth. Dependiendo del contenido de la palabra:
-/// - Si es `":"`, define una nueva palabra utilizando `handle_definition`.
-/// - Si está definida en el diccionario, ejecuta su definición.
-/// - Si es `IF`, ejecuta una estructura condicional utilizando `execute_conditional`.
-/// - Si no coincide con ninguno de los casos anteriores, intenta ejecutarla como una palabra built-in.
-///
-/// # Parámetros
-/// - `stack`: Pila sobre la que se realizarán las operaciones.
-/// - `word`: La palabra a procesar.
-/// - `tokens`: Slice de tokens que contiene el código fuente.
-/// - `i`: Índice actual en el slice de tokens.
-/// - `dict`: Diccionario que mapea nombres de palabras a slices de tokens.
-///
-/// # Retorna
-/// - `Ok(usize)`: El índice del siguiente token después de procesar la palabra.
-/// - `Err(String)`: Si ocurre un error durante el procesamiento.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::interpreter::handle_word_token;
-/// use taller_tp_individual::parser::Token;
-/// use taller_tp_individual::stack::Stack;
-/// use std::collections::HashMap;
-///
-/// let mut stack = Stack::new(10);
-/// let tokens = vec![Token::Word("DUP".to_string())];
-/// let mut dictionary = HashMap::new();
-///
-/// let result = handle_word_token(&mut stack, "DUP", &tokens, 0, &mut dictionary);
-/// assert!(result.is_ok());
-/// ```
-fn handle_word_token<'a>(
-    stack: &mut Stack,
-    word: &str,
-    tokens: &'a [Word],
-    i: usize,
-    dict: &mut HashMap<String, &'a [Word]>,
-) -> Result<usize, String> {
-    let word_upper = word.to_uppercase();
-    match word_upper.as_str() {
-        ":" => handle_definition(tokens, i, dict),
-        "IF" => execute_conditional(stack, tokens, i, dict),
-        _ => {
-            if let Some(def_tokens) = dict.get(&word_upper) {
-                execute_tokens(stack, def_tokens, dict)?;
-                Ok(i + 1)
-            } else {
-                handle_word(stack, &word_upper)?;
-                Ok(i + 1)
-            }
-        }
-    }
-}
-
-/// Define una nueva palabra (word).
-///
-/// La definición tiene la sintaxis: `: <word-name> <word-body> ;`.
-/// Esta función almacena la definición en el diccionario `dict` como un slice de tokens.
-///
-/// # Parámetros
-/// - `tokens`: Slice de tokens que contiene la definición.
-/// - `i`: Índice actual en el slice de tokens.
-/// - `dict`: Diccionario donde se almacenará la definición.
-///
-/// # Retorna
-/// - `Ok(usize)`: El índice del siguiente token después de la definición.
-/// - `Err(String)`: Si la definición es inválida.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::interpreter::handle_definition;
-/// use taller_tp_individual::parser::Token;
-/// use std::collections::HashMap;
-///
-/// let tokens = vec![
-///     Token::Word(":".to_string()),
-///     Token::Word("SQUARE".to_string()),
-///     Token::Word("DUP".to_string()),
-///     Token::Word("*".to_string()),
-///     Token::Word(";".to_string()),
-/// ];
-/// let mut dictionary = HashMap::new();
-/// let result = handle_definition(&tokens, 0, &mut dictionary);
-/// assert!(result.is_ok());
-/// assert!(dictionary.contains_key("SQUARE"));
-/// ```
-fn handle_definition<'a>(
-    tokens: &'a [Word],
-    mut i: usize,
-    dict: &mut HashMap<String, &'a [Word]>,
-) -> Result<usize, String> {
-    i += 1;
-    let name = extract_word_name(tokens, i)?;
-    i += 1;
-
-    let start = i;
-    while i < tokens.len() {
-        if let Word::Words(ref w) = tokens[i] {
-            if w.to_uppercase() == ";" {
-                dict.insert(name, &tokens[start..i]);
-                return Ok(i + 1);
-            }
-        }
-        i += 1;
+        interpreter
     }
 
-    Err("Definition missing closing ;".to_string())
-}
-
-fn extract_word_name(tokens: &[Word], i: usize) -> Result<String, String> {
-    if let Some(Word::Words(w)) = tokens.get(i) {
-        if w.parse::<i16>().is_err() {
-            return Ok(w.to_uppercase());
-        }
+    /// Registra las operaciones básicas en el diccionario.
+    ///
+    /// Este método organiza las operaciones en categorías como aritméticas,
+    /// de pila, lógicas, de control de flujo y de salida.
+    fn register_builtin_operations(&mut self) {
+        self.register_arithmetic_operations();
+        self.register_stack_operations();
+        self.register_logical_operations();
+        self.register_control_flow_operations();
+        self.register_output_operations();
     }
-    Err("Invalid word name".to_string())
-}
 
-/// Ejecuta una estructura condicional en el lenguaje Forth.
-///
-/// La sintaxis es: `IF <true-branch> [ELSE <false-branch>] THEN`.
-///
-/// # Parámetros
-/// - `stack`: Pila sobre la que se realizarán las operaciones.
-/// - `tokens`: Slice de tokens que contiene la estructura condicional.
-/// - `if_index`: Índice del token `IF`.
-/// - `dict`: Diccionario que mapea nombres de palabras a slices de tokens.
-///
-/// # Retorna
-/// - `Ok(usize)`: El índice del siguiente token después de `THEN`.
-/// - `Err(String)`: Si la estructura condicional es inválida.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::interpreter::execute_conditional;
-/// use taller_tp_individual::parser::Token;
-/// use taller_tp_individual::stack::Stack;
-/// use std::collections::HashMap;
-///
-/// let mut stack = Stack::new(10);
-/// stack.push(1); // Condición verdadera
-/// let tokens = vec![
-///     Token::Word("IF".to_string()),
-///     Token::Number(42),
-///     Token::Word("THEN".to_string()),
-/// ];
-/// let mut dictionary = HashMap::new();
-///
-/// let result = execute_conditional(&mut stack, &tokens, 0, &mut dictionary);
-/// assert!(result.is_ok());
-/// assert_eq!(stack.pop().unwrap(), 42);
-/// ```
-fn execute_conditional<'a>(
-    stack: &mut Stack,
-    tokens: &'a [Word],
-    if_index: usize,
-    dict: &mut HashMap<String, &'a [Word]>,
-) -> Result<usize, String> {
-    let (else_index, then_index) = find_else_then_indices(tokens, if_index)?;
-    let cond = stack.pop()? != 0;
+    fn register_arithmetic_operations(&mut self) {
+        self.dict
+            .insert("+".to_string(), Rc::new(Word::Builtin("+".to_string())));
+        self.dict
+            .insert("-".to_string(), Rc::new(Word::Builtin("-".to_string())));
+        self.dict
+            .insert("*".to_string(), Rc::new(Word::Builtin("*".to_string())));
+        self.dict
+            .insert("/".to_string(), Rc::new(Word::Builtin("/".to_string())));
+    }
 
-    let branch_tokens = if cond {
-        &tokens[if_index + 1..else_index.unwrap_or(then_index)]
-    } else if let Some(e_idx) = else_index {
-        &tokens[e_idx + 1..then_index]
-    } else {
-        &[]
-    };
+    fn register_stack_operations(&mut self) {
+        self.dict
+            .insert("DUP".to_string(), Rc::new(Word::Builtin("DUP".to_string())));
+        self.dict.insert(
+            "SWAP".to_string(),
+            Rc::new(Word::Builtin("SWAP".to_string())),
+        );
+        self.dict.insert(
+            "DROP".to_string(),
+            Rc::new(Word::Builtin("DROP".to_string())),
+        );
+        self.dict
+            .insert("ROT".to_string(), Rc::new(Word::Builtin("ROT".to_string())));
+        self.dict.insert(
+            "OVER".to_string(),
+            Rc::new(Word::Builtin("OVER".to_string())),
+        );
+    }
 
-    execute_tokens(stack, branch_tokens, dict)?;
-    Ok(then_index + 1)
-}
+    fn register_logical_operations(&mut self) {
+        self.dict
+            .insert("NOT".to_string(), Rc::new(Word::Builtin("NOT".to_string())));
+        self.dict
+            .insert("AND".to_string(), Rc::new(Word::Builtin("AND".to_string())));
+        self.dict
+            .insert("OR".to_string(), Rc::new(Word::Builtin("OR".to_string())));
+        self.dict
+            .insert("=".to_string(), Rc::new(Word::Builtin("=".to_string())));
+        self.dict
+            .insert("<".to_string(), Rc::new(Word::Builtin("<".to_string())));
+        self.dict
+            .insert(">".to_string(), Rc::new(Word::Builtin(">".to_string())));
+    }
 
-/// Busca los índices de los tokens "ELSE" y "THEN" en una estructura condicional.
-///
-/// Retorna una tupla `(else_index, then_index)`.
-fn find_else_then_indices(
-    tokens: &[Word],
-    if_index: usize,
-) -> Result<(Option<usize>, usize), String> {
-    // Devuelve (opcional_else_index, then_index)
-    let mut nest = 0;
-    let mut else_index = None;
-    for (j, token) in tokens.iter().enumerate().skip(if_index + 1) {
-        if let Word::Words(w) = token {
-            let w_upper = w.to_uppercase();
-            if w_upper == "IF" {
-                nest += 1;
-            } else if w_upper == "THEN" {
-                if nest == 0 {
-                    return Ok((else_index, j));
-                } else {
-                    nest -= 1;
+    fn register_control_flow_operations(&mut self) {
+        self.dict
+            .insert("IF".to_string(), Rc::new(Word::Builtin("IF".to_string())));
+        self.dict.insert(
+            "ELSE".to_string(),
+            Rc::new(Word::Builtin("ELSE".to_string())),
+        );
+        self.dict.insert(
+            "THEN".to_string(),
+            Rc::new(Word::Builtin("THEN".to_string())),
+        );
+    }
+
+    fn register_output_operations(&mut self) {
+        self.dict.insert(
+            "EMIT".to_string(),
+            Rc::new(Word::Builtin("EMIT".to_string())),
+        );
+        self.dict
+            .insert("CR".to_string(), Rc::new(Word::Builtin("CR".to_string())));
+        self.dict
+            .insert(".".to_string(), Rc::new(Word::Builtin(".".to_string())));
+        self.dict
+            .insert(".\"".to_string(), Rc::new(Word::Builtin(".\"".to_string())));
+    }
+
+    /// Convierte la pila en un vector para inspección.
+    ///
+    /// # Ejemplo
+    /// ```rust
+    /// use taller_tp_individual::interpreter::Interpreter;
+    ///
+    /// let mut interpreter = Interpreter::new(1024);
+    /// interpreter.parse_line("1 2 3").unwrap();
+    /// assert_eq!(interpreter.stack_to_vec(), vec![1, 2, 3]);
+    /// ```
+    pub fn stack_to_vec(&self) -> Vec<i16> {
+        self.stack.to_vec().to_vec()
+    }
+
+    /// Ejecuta una operación aritmética binaria.
+    ///
+    /// Este método extrae dos valores de la pila, aplica la operación y
+    /// empuja el resultado de vuelta a la pila.
+    fn apply_binary_op<F>(&mut self, op: F) -> Result<(), String>
+    where
+        F: Fn(i16, i16) -> i16,
+    {
+        let b = self.stack.pop()?;
+        let a = self.stack.pop()?;
+        self.stack.push(op(a, b))
+    }
+
+    fn handle_swap(&mut self) -> Result<(), String> {
+        let b = self.stack.pop()?;
+        let a = self.stack.pop()?;
+        self.stack.push(b)?;
+        self.stack.push(a)
+    }
+
+    fn handle_division(&mut self) -> Result<(), String> {
+        let b = self.stack.pop()?;
+        if b == 0 {
+            return Err("division-by-zero".to_string());
+        }
+        let a = self.stack.pop()?;
+        self.stack.push(a / b)
+    }
+
+    fn handle_dup(&mut self) -> Result<(), String> {
+        let val = self.stack.peek()?;
+        self.stack.push(val)
+    }
+
+    fn handle_drop(&mut self) -> Result<(), String> {
+        self.stack.pop().map(|_| ()).map_err(|e| e.to_string())
+    }
+
+    fn handle_rot(&mut self) -> Result<(), String> {
+        let c = self.stack.pop()?;
+        let b = self.stack.pop()?;
+        let a = self.stack.pop()?;
+        self.stack.push(b)?;
+        self.stack.push(c)?;
+        self.stack.push(a)
+    }
+
+    fn handle_not(&mut self) -> Result<(), String> {
+        let a = self.stack.pop()?;
+        let result = if a == 0 { -1 } else { 0 };
+        self.stack.push(result)
+    }
+
+    fn handle_emit(&mut self) -> Result<(), String> {
+        let code = self.stack.pop()?;
+        let c = std::char::from_u32(code as u32)
+            .ok_or_else(|| "Valor para EMIT no es un carácter válido".to_string())?;
+        print!("{} ", c);
+        Ok(())
+    }
+
+    fn handle_and(&mut self) -> Result<(), String> {
+        self.apply_binary_op(|a, b| if a != 0 && b != 0 { -1 } else { 0 })
+    }
+
+    fn handle_or(&mut self) -> Result<(), String> {
+        self.apply_binary_op(|a, b| if a != 0 || b != 0 { -1 } else { 0 })
+    }
+
+    fn handle_equals(&mut self) -> Result<(), String> {
+        self.apply_binary_op(|a, b| if a == b { -1 } else { 0 })
+    }
+
+    fn handle_less_than(&mut self) -> Result<(), String> {
+        self.apply_binary_op(|a, b| if a < b { -1 } else { 0 })
+    }
+
+    fn handle_greater_than(&mut self) -> Result<(), String> {
+        self.apply_binary_op(|a, b| if a > b { -1 } else { 0 })
+    }
+
+    fn handle_over(&mut self) -> Result<(), String> {
+        let b = self.stack.pop()?;
+        let a = self.stack.pop()?;
+        self.stack.push(a)?;
+        self.stack.push(b)?;
+        self.stack.push(a)
+    }
+
+    fn handle_if(&mut self) -> Result<(), String> {
+        let condition = self.stack.pop()?;
+        if condition == 0 {
+            let mut nesting = 1;
+            while let Some(token) = self.next_token() {
+                if token == "IF" {
+                    nesting += 1;
+                } else if token == "THEN" {
+                    nesting -= 1;
+                    if nesting == 0 {
+                        break;
+                    }
+                } else if token == "ELSE" && nesting == 1 {
+                    break;
                 }
-            } else if w_upper == "ELSE" && nest == 0 && else_index.is_none() {
-                else_index = Some(j);
             }
         }
-    }
-    Err("Estructura IF sin THEN".to_string())
-}
-
-/// Maneja la ejecución de palabras (words) en el lenguaje Forth.
-///
-/// Esta función identifica y ejecuta palabras predefinidas (built-in) o realiza operaciones
-/// aritméticas y lógicas utilizando un diccionario de operaciones binarias.
-///
-/// # Parámetros
-/// - `stack`: La pila sobre la que se realizarán las operaciones.
-/// - `word`: La palabra a ejecutar.
-///
-/// # Retorna
-/// - `Ok(())` si la operación se ejecutó correctamente.
-/// - `Err(String)` si ocurre un error o la palabra no se reconoce.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::interpreter::handle_word;
-/// use taller_tp_individual::stack::Stack;
-///
-/// let mut stack = Stack::new(10);
-/// stack.push(2);
-/// stack.push(3);
-/// handle_word(&mut stack, "+").unwrap();
-/// assert_eq!(stack.pop().unwrap(), 5);
-/// ```
-fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
-    let binary_ops: HashMap<&str, fn(i16, i16) -> i16> = HashMap::from([
-        ("+", add as fn(i16, i16) -> i16),
-        ("-", subtract as fn(i16, i16) -> i16),
-        ("*", multiply as fn(i16, i16) -> i16),
-        ("=", equals as fn(i16, i16) -> i16),
-        ("<", less_than as fn(i16, i16) -> i16),
-        (">", greater_than as fn(i16, i16) -> i16),
-        ("AND", and_op as fn(i16, i16) -> i16),
-        ("OR", or_op as fn(i16, i16) -> i16),
-    ]);
-
-    if let Some(op) = binary_ops.get(word.to_uppercase().as_str()) {
-        return apply_binary_op(stack, *op);
+        Ok(())
     }
 
-    match word.to_uppercase().as_str() {
-        "/" => handle_division(stack),
-        "DUP" => handle_dup(stack),
-        "DROP" => handle_drop(stack),
-        "SWAP" => handle_swap(stack),
-        "OVER" => handle_over(stack),
-        "ROT" => handle_rot(stack),
-        "NOT" => handle_not(stack),
-        "EMIT" => handle_emit(stack),
-        "." => handle_dot(stack),
-        "CR" => handle_cr(),
-        _ => Err("?".to_string()),
+    fn handle_else(&mut self) -> Result<(), String> {
+        let mut nesting = 1;
+        while let Some(token) = self.next_token() {
+            if token == "IF" {
+                nesting += 1;
+            } else if token == "THEN" {
+                nesting -= 1;
+                if nesting == 0 {
+                    break;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_then(&mut self) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn handle_dot_quote(&mut self) -> Result<(), String> {
+        let mut collected = String::new();
+        let mut found_end = false;
+
+        while let Some(token) = self.next_token() {
+            if token.ends_with("\"") {
+                let token_without_quote = token.trim_end_matches("\"");
+                collected.push_str(token_without_quote);
+                found_end = true;
+                break;
+            } else {
+                collected.push_str(&token);
+                collected.push(' ');
+            }
+        }
+
+        if !found_end {
+            return Err("Missing closing quote for .\"".to_string());
+        }
+
+        if collected.ends_with(' ') {
+            collected.pop();
+        }
+
+        print!("{}", collected);
+        Ok(())
+    }
+
+    fn next_token(&mut self) -> Option<String> {
+        if self.token_index < self.tokens.len() {
+            let token = self.tokens[self.token_index].clone();
+            self.token_index += 1;
+            Some(token)
+        } else {
+            None
+        }
+    }
+
+    /// Procesa una línea de entrada en el lenguaje Forth.
+    ///
+    /// Este método divide la línea en tokens, los resuelve y los ejecuta.
+    ///
+    /// # Ejemplo
+    /// ```rust
+    /// use taller_tp_individual::interpreter::Interpreter;
+    ///
+    /// let mut interpreter = Interpreter::new(1024);
+    /// interpreter.parse_line("1 2 + .").unwrap(); // Imprime "3"
+    /// ```
+    pub fn parse_line(&mut self, line: &str) -> Result<(), String> {
+        self.tokens = line.split_whitespace().map(|s| s.to_string()).collect();
+        self.token_index = 0;
+
+        while let Some(token) = self.next_token() {
+            match token.as_str() {
+                ":" => {
+                    let name = self.next_token().ok_or("invalid-word".to_string())?;
+                    self.start_definition(&name)?;
+                }
+                ";" => {
+                    self.end_definition()?;
+                }
+                _ => {
+                    self.process_token(&token)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Inicia la definición de una nueva word.
+    fn start_definition(&mut self, name: &str) -> Result<(), String> {
+        if self.compiling.is_some() {
+            return Err("Syntax error: nested definitions are not allowed".to_string());
+        }
+
+        if name.parse::<i16>().is_ok() {
+            return Err("invalid-word".to_string());
+        }
+
+        let name_upper = name.to_uppercase();
+        self.compiling = Some((name_upper, Vec::new()));
+        Ok(())
+    }
+
+    fn end_definition(&mut self) -> Result<(), String> {
+        if let Some((name, words)) = self.compiling.take() {
+            self.dict.insert(name, Rc::new(Word::Words(words))); // Almacena la definición en el diccionario.
+            Ok(())
+        } else {
+            Err("invalid-word".to_string())
+        }
+    }
+
+    /// Procesa un token, ya sea ejecutándolo o agregándolo a una definición en curso.
+    fn process_token(&mut self, token: &str) -> Result<(), String> {
+        let word = self.resolve_token(token)?;
+
+        if let Some((_, ref mut words)) = self.compiling {
+            words.push(word);
+        } else {
+            self.run_word(&word)?;
+        }
+
+        Ok(())
+    }
+
+    /// Resuelve un token, buscando en el diccionario o interpretándolo como un literal.
+    fn resolve_token(&self, token: &str) -> Result<Rc<Word>, String> {
+        let token_upper = token.to_uppercase();
+        if let Some(word) = self.dict.get(&token_upper) {
+            Ok(Rc::clone(word))
+        } else if let Ok(number) = token.parse::<i16>() {
+            Ok(Rc::new(Word::Number(number)))
+        } else {
+            Err("?".to_string())
+        }
+    }
+
+    /// Ejecuta un word en el contexto actual.
+    ///
+    /// Este método maneja words de tipo `Number`, `Words` y `Builtin`.
+    fn run_word(&mut self, word: &Rc<Word>) -> Result<(), String> {
+        match &**word {
+            Word::Number(n) => self.run_number(*n),
+            Word::Words(words) => self.run_words(words),
+            Word::Builtin(op) => self.run_builtin(op),
+        }
+    }
+
+    fn run_number(&mut self, n: i16) -> Result<(), String> {
+        self.stack.push(n)
+    }
+
+    fn run_words(&mut self, words: &[Rc<Word>]) -> Result<(), String> {
+        for w in words {
+            self.run_word(w)?; // Pasamos una referencia en lugar de clonar.
+        }
+        Ok(())
+    }
+
+    fn run_builtin(&mut self, op: &str) -> Result<(), String> {
+        match op {
+            "+" => self.apply_binary_op(|a, b| a + b),
+            "-" => self.apply_binary_op(|a, b| a - b),
+            "*" => self.apply_binary_op(|a, b| a * b),
+            "/" => self.handle_division(),
+            "DUP" => self.handle_dup(),
+            "SWAP" => self.handle_swap(),
+            "DROP" => self.handle_drop(),
+            "ROT" => self.handle_rot(),
+            "OVER" => self.handle_over(),
+            "NOT" => self.handle_not(),
+            "EMIT" => self.handle_emit(),
+            "AND" => self.handle_and(),
+            "OR" => self.handle_or(),
+            "=" => self.handle_equals(),
+            "<" => self.handle_less_than(),
+            ">" => self.handle_greater_than(),
+            "IF" => self.handle_if(),
+            "ELSE" => self.handle_else(),
+            "THEN" => self.handle_then(),
+            "CR" => {
+                println!();
+                Ok(())
+            }
+            "." => {
+                let val = self.stack.pop().map_err(|e| e.to_string())?;
+                print!("{} ", val);
+                Ok(())
+            }
+            ".\"" => self.handle_dot_quote(),
+            _ => Err("invalid-word".to_string()),
+        }
     }
 }
 
-/// Suma dos números enteros.
-///
-/// # Parámetros
-/// - `a`: El primer número.
-/// - `b`: El segundo número.
-///
-/// # Retorna
-/// - La suma de `a` y `b`.
-fn add(a: i16, b: i16) -> i16 {
-    a + b
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-/// Resta dos números enteros.
-///
-/// # Parámetros
-/// - `a`: El primer número.
-/// - `b`: El segundo número.
-///
-/// # Retorna
-/// - La resta de `a` menos `b`.
-fn subtract(a: i16, b: i16) -> i16 {
-    a - b
-}
+    #[test]
+    fn test_arithmetic_operations() {
+        let mut interpreter = Interpreter::new(1024);
+        interpreter.parse_line("1 2 +").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![3]);
 
-/// Multiplica dos números enteros.
-///
-/// # Parámetros
-/// - `a`: El primer número.
-/// - `b`: El segundo número.
-///
-/// # Retorna
-/// - El producto de `a` y `b`.
-fn multiply(a: i16, b: i16) -> i16 {
-    a * b
-}
+        interpreter.parse_line("10 5 -").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![3, 5]);
 
-/// Compara si dos números son iguales.
-///
-/// # Parámetros
-/// - `a`: El primer número.
-/// - `b`: El segundo número.
-///
-/// # Retorna
-/// - `-1` si `a` es igual a `b`.
-/// - `0` en caso contrario.
-fn equals(a: i16, b: i16) -> i16 {
-    if a == b { -1 } else { 0 }
-}
+        interpreter.parse_line("3 4 *").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![3, 5, 12]);
 
-/// Compara si un número es menor que otro.
-///
-/// # Parámetros
-/// - `a`: El primer número.
-/// - `b`: El segundo número.
-///
-/// # Retorna
-/// - `-1` si `a` es menor que `b`.
-/// - `0` en caso contrario.
-fn less_than(a: i16, b: i16) -> i16 {
-    if a < b { -1 } else { 0 }
-}
-
-/// Compara si un número es mayor que otro.
-///
-/// # Parámetros
-/// - `a`: El primer número.
-/// - `b`: El segundo número.
-///
-/// # Retorna
-/// - `-1` si `a` es mayor que `b`.
-/// - `0` en caso contrario.
-fn greater_than(a: i16, b: i16) -> i16 {
-    if a > b { -1 } else { 0 }
-}
-
-/// Realiza una operación lógica AND entre dos números.
-///
-/// # Parámetros
-/// - `a`: El primer número.
-/// - `b`: El segundo número.
-///
-/// # Retorna
-/// - `-1` si ambos números son diferentes de `0`.
-/// - `0` en caso contrario.
-fn and_op(a: i16, b: i16) -> i16 {
-    if a != 0 && b != 0 { -1 } else { 0 }
-}
-
-/// Realiza una operación lógica OR entre dos números.
-///
-/// # Parámetros
-/// - `a`: El primer número.
-/// - `b`: El segundo número.
-///
-/// # Retorna
-/// - `-1` si al menos uno de los números es diferente de `0`.
-/// - `0` en caso contrario.
-fn or_op(a: i16, b: i16) -> i16 {
-    if a != 0 || b != 0 { -1 } else { 0 }
-}
-
-/// Maneja la división entre dos números.
-///
-/// # Parámetros
-/// - `stack`: La pila sobre la que se realizará la operación.
-///
-/// # Retorna
-/// - `Ok(())` si la operación se realizó correctamente.
-/// - `Err(String)` si se intenta dividir por cero.
-fn handle_division(stack: &mut Stack) -> Result<(), String> {
-    let b = stack.pop()?;
-    if b == 0 {
-        return Err("division-by-zero".to_string());
+        interpreter.parse_line("20 4 /").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![3, 5, 12, 5]);
     }
-    let a = stack.pop()?;
-    stack.push(a / b)
-}
 
-/// Duplica el valor en la cima de la pila.
-///
-/// Esta función toma el valor superior de la pila y lo empuja nuevamente,
-/// duplicando el valor.
-///
-/// # Parámetros
-/// - `stack`: La pila sobre la que se realizará la operación.
-///
-/// # Retorna
-/// - `Ok(())` si la operación se realizó correctamente.
-/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::stack::Stack;
-/// use taller_tp_individual::interpreter::handle_dup;
-///
-/// let mut stack = Stack::new(10);
-/// stack.push(42).unwrap();
-/// handle_dup(&mut stack).unwrap();
-/// assert_eq!(stack.pop().unwrap(), 42);
-/// assert_eq!(stack.pop().unwrap(), 42);
-/// ```
-fn handle_dup(stack: &mut Stack) -> Result<(), String> {
-    let val = stack.peek().map_err(|e| e.to_string())?;
-    stack.push(val).map_err(|e| e.to_string())
-}
+    #[test]
+    fn test_stack_operations() {
+        let mut interpreter = Interpreter::new(1024);
+        interpreter.parse_line("1 2 3").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![1, 2, 3]);
 
-/// Elimina el valor en la cima de la pila.
-///
-/// Esta función elimina el valor superior de la pila.
-///
-/// # Parámetros
-/// - `stack`: La pila sobre la que se realizará la operación.
-///
-/// # Retorna
-/// - `Ok(())` si la operación se realizó correctamente.
-/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::stack::Stack;
-/// use taller_tp_individual::interpreter::handle_drop;
-///
-/// let mut stack = Stack::new(10);
-/// stack.push(42).unwrap();
-/// handle_drop(&mut stack).unwrap();
-/// assert!(stack.is_empty());
-/// ```
-fn handle_drop(stack: &mut Stack) -> Result<(), String> {
-    stack.pop().map_err(|e| e.to_string())?;
-    Ok(())
-}
+        interpreter.parse_line("DUP").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![1, 2, 3, 3]);
 
-/// Intercambia los dos valores superiores de la pila.
-///
-/// Esta función toma los dos valores superiores de la pila y los intercambia.
-///
-/// # Parámetros
-/// - `stack`: La pila sobre la que se realizará la operación.
-///
-/// # Retorna
-/// - `Ok(())` si la operación se realizó correctamente.
-/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::stack::Stack;
-/// use taller_tp_individual::interpreter::handle_swap;
-///
-/// let mut stack = Stack::new(10);
-/// stack.push(1).unwrap();
-/// stack.push(2).unwrap();
-/// handle_swap(&mut stack).unwrap();
-/// assert_eq!(stack.pop().unwrap(), 1);
-/// assert_eq!(stack.pop().unwrap(), 2);
-/// ```
-fn handle_swap(stack: &mut Stack) -> Result<(), String> {
-    let b = stack.pop().map_err(|e| e.to_string())?;
-    let a = stack.pop().map_err(|e| e.to_string())?;
-    stack.push(b).map_err(|e| e.to_string())?;
-    stack.push(a).map_err(|e| e.to_string())
-}
+        interpreter.parse_line("SWAP").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![1, 2, 3, 3]);
 
-/// Copia el segundo valor desde la cima de la pila.
-///
-/// Esta función toma el segundo valor desde la cima de la pila y lo empuja
-/// nuevamente a la pila.
-///
-/// # Parámetros
-/// - `stack`: La pila sobre la que se realizará la operación.
-///
-/// # Retorna
-/// - `Ok(())` si la operación se realizó correctamente.
-/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::stack::Stack;
-/// use taller_tp_individual::interpreter::handle_over;
-///
-/// let mut stack = Stack::new(10);
-/// stack.push(1).unwrap();
-/// stack.push(2).unwrap();
-/// handle_over(&mut stack).unwrap();
-/// assert_eq!(stack.pop().unwrap(), 1);
-/// assert_eq!(stack.pop().unwrap(), 2);
-/// assert_eq!(stack.pop().unwrap(), 1);
-/// ```
-fn handle_over(stack: &mut Stack) -> Result<(), String> {
-    let val = stack.peek_n(1).map_err(|e| e.to_string())?;
-    stack.push(val).map_err(|e| e.to_string())
-}
+        interpreter.parse_line("DROP").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![1, 2, 3]);
+    }
 
-/// Rota los tres valores superiores de la pila.
-///
-/// Esta función toma los tres valores superiores de la pila y los rota:
-/// el tercer valor desde la cima se mueve a la cima.
-///
-/// # Parámetros
-/// - `stack`: La pila sobre la que se realizará la operación.
-///
-/// # Retorna
-/// - `Ok(())` si la operación se realizó correctamente.
-/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::stack::Stack;
-/// use taller_tp_individual::interpreter::handle_rot;
-///
-/// let mut stack = Stack::new(10);
-/// stack.push(1).unwrap();
-/// stack.push(2).unwrap();
-/// stack.push(3).unwrap();
-/// handle_rot(&mut stack).unwrap();
-/// assert_eq!(stack.pop().unwrap(), 2);
-/// assert_eq!(stack.pop().unwrap(), 1);
-/// assert_eq!(stack.pop().unwrap(), 3);
-/// ```
-fn handle_rot(stack: &mut Stack) -> Result<(), String> {
-    let c = stack.pop().map_err(|e| e.to_string())?;
-    let b = stack.pop().map_err(|e| e.to_string())?;
-    let a = stack.pop().map_err(|e| e.to_string())?;
-    stack.push(b).map_err(|e| e.to_string())?;
-    stack.push(c).map_err(|e| e.to_string())?;
-    stack.push(a).map_err(|e| e.to_string())
-}
+    #[test]
+    fn test_define_and_execute_word() {
+        let mut interpreter = Interpreter::new(1024);
+        interpreter.parse_line(": SQUARE DUP * ;").unwrap();
+        interpreter.parse_line("4 SQUARE").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![16]);
+    }
 
-/// Realiza una operación lógica NOT sobre el valor superior de la pila.
-///
-/// Esta función toma el valor superior de la pila y empuja `-1` si el valor es `0`,
-/// o `0` si el valor es diferente de `0`.
-///
-/// # Parámetros
-/// - `stack`: La pila sobre la que se realizará la operación.
-///
-/// # Retorna
-/// - `Ok(())` si la operación se realizó correctamente.
-/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::stack::Stack;
-/// use taller_tp_individual::interpreter::handle_not;
-///
-/// let mut stack = Stack::new(10);
-/// stack.push(0).unwrap();
-/// handle_not(&mut stack).unwrap();
-/// assert_eq!(stack.pop().unwrap(), -1);
-/// ```
-fn handle_not(stack: &mut Stack) -> Result<(), String> {
-    let a = stack.pop()?;
-    let result = if a == 0 { -1 } else { 0 };
-    stack.push(result)
-}
+    #[test]
+    fn test_conditional_execution() {
+        let mut interpreter = Interpreter::new(1024);
+        interpreter.parse_line("1 IF 42 ELSE 99 THEN").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![42]);
 
-/// Imprime el carácter correspondiente al valor superior de la pila.
-///
-/// Esta función toma el valor superior de la pila, lo interpreta como un código ASCII
-/// y lo imprime como un carácter.
-///
-/// # Parámetros
-/// - `stack`: La pila sobre la que se realizará la operación.
-///
-/// # Retorna
-/// - `Ok(())` si la operación se realizó correctamente.
-/// - `Err(String)` si el valor no es un carácter válido.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::stack::Stack;
-/// use taller_tp_individual::interpreter::handle_emit;
-///
-/// let mut stack = Stack::new(10);
-/// stack.push(65).unwrap(); // Código ASCII de 'A'
-/// handle_emit(&mut stack).unwrap();
-/// // Salida: A
-/// ```
-fn handle_emit(stack: &mut Stack) -> Result<(), String> {
-    let code = stack.pop()?;
-    let c = std::char::from_u32(code as u32)
-        .ok_or_else(|| "Valor para EMIT no es un carácter válido".to_string())?;
-    print!("{} ", c);
-    Ok(())
-}
+        interpreter.parse_line("0 IF 42 ELSE 99 THEN").unwrap();
+        assert_eq!(interpreter.stack_to_vec(), vec![42, 99]);
+    }
 
-/// Imprime el valor superior de la pila.
-///
-/// Esta función toma el valor superior de la pila y lo imprime como un número entero.
-///
-/// # Parámetros
-/// - `stack`: La pila sobre la que se realizará la operación.
-///
-/// # Retorna
-/// - `Ok(())` si la operación se realizó correctamente.
-/// - `Err(String)` si ocurre un error al acceder o modificar la pila.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::stack::Stack;
-/// use taller_tp_individual::interpreter::handle_dot;
-///
-/// let mut stack = Stack::new(10);
-/// stack.push(42).unwrap();
-/// handle_dot(&mut stack).unwrap();
-/// // Salida: 42
-/// ```
-fn handle_dot(stack: &mut Stack) -> Result<(), String> {
-    let val = stack.pop().map_err(|e| e.to_string())?;
-    print!("{} ", val);
-    Ok(())
-}
+    #[test]
+    fn test_error_handling() {
+        let mut interpreter = Interpreter::new(1024);
+        let result = interpreter.parse_line("1 0 /");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "division-by-zero".to_string());
+    }
 
-/// Imprime un salto de línea.
-///
-/// Esta función imprime un salto de línea en la salida estándar.
-///
-/// # Retorna
-/// - `Ok(())` siempre.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::interpreter::handle_cr;
-///
-/// handle_cr().unwrap();
-/// // Salida: (salto de línea)
-/// ```
-fn handle_cr() -> Result<(), String> {
-    println!();
-    Ok(())
-}
-
-/// Aplica una operación binaria sobre los dos valores superiores de la pila.
-///
-/// Retorna `Ok(())` si la operación se aplica correctamente o un `Err` con el mensaje de error.
-fn apply_binary_op<F>(stack: &mut Stack, op: F) -> Result<(), String>
-where
-    F: Fn(i16, i16) -> i16,
-{
-    let b = stack.pop().map_err(|e| e.to_string())?;
-    let a = stack.pop().map_err(|e| e.to_string())?;
-    stack.push(op(a, b)).map_err(|e| e.to_string())
+    #[test]
+    fn test_output_operations() {
+        let mut interpreter = Interpreter::new(1024);
+        interpreter.parse_line("65 EMIT").unwrap(); // ASCII de 'A'
+        // No hay una forma directa de capturar el stdout en pruebas unitarias estándar,
+        // pero puedes verificar que no haya errores y que la pila esté vacía.
+        assert_eq!(interpreter.stack_to_vec(), vec![]);
+    }
 }

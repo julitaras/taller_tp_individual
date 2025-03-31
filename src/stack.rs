@@ -19,7 +19,7 @@
 ///
 /// # Campos
 /// - `data`: Vector interno que almacena los valores de la pila.
-/// - `max_size`: Tamaño máximo de la pila.
+/// - `max_size`: Tamaño máximo de la pila en bytes.
 #[derive(Debug, PartialEq)]
 pub struct Stack {
     /// Representa la información que guardamos.
@@ -71,12 +71,14 @@ impl Stack {
     /// assert!(stack.push(20).is_ok());
     /// assert_eq!(stack.push(30), Err("stack-overflow".to_string()));
     /// ```
-    pub fn push(&mut self, val: i16) -> Result<(), String> {
-        if self.data.len() >= self.max_size {
-            return Err("stack-overflow".to_string());
+    pub fn push(&mut self, value: i16) -> Result<(), String> {
+        let max_elements = self.max_size / std::mem::size_of::<i16>(); // Calcula el número máximo de elementos.
+        if self.data.len() >= max_elements {
+            Err("stack-overflow".to_string())
+        } else {
+            self.data.push(value);
+            Ok(())
         }
-        self.data.push(val);
-        Ok(())
     }
 
     /// Saca el valor superior de la pila.
@@ -125,38 +127,6 @@ impl Stack {
             .ok_or_else(|| "stack-underflow".to_string())
     }
 
-    /// Devuelve el n-ésimo elemento desde la parte superior de la pila (0 es el tope).
-    ///
-    /// Si la pila no tiene suficientes elementos, se retorna un error de "stack-underflow".
-    ///
-    /// # Parámetros
-    /// - `n`: Índice del elemento a consultar desde el tope (0 es el tope, 1 es el siguiente, etc.).
-    ///
-    /// # Retorna
-    /// - `Ok(i16)`: El valor en la posición especificada.
-    /// - `Err(String)`: Si la pila no tiene suficientes elementos.
-    ///
-    /// # Ejemplo
-    /// ```rust
-    /// use taller_tp_individual::stack::Stack;
-    ///
-    /// let mut stack = Stack::new(3);
-    /// stack.push(1).unwrap();
-    /// stack.push(2).unwrap();
-    /// stack.push(3).unwrap();
-    /// assert_eq!(stack.peek_n(0), Ok(3));
-    /// assert_eq!(stack.peek_n(1), Ok(2));
-    /// assert_eq!(stack.peek_n(2), Ok(1));
-    /// assert_eq!(stack.peek_n(3), Err("stack-underflow".to_string()));
-    /// ```
-    pub fn peek_n(&self, n: usize) -> Result<i16, String> {
-        if self.data.len() > n {
-            Ok(self.data[self.data.len() - 1 - n])
-        } else {
-            Err("stack-underflow".to_string())
-        }
-    }
-
     /// Devuelve una referencia al vector interno de datos.
     ///
     /// Los elementos están en el mismo orden en que fueron insertados (FIFO).
@@ -197,8 +167,7 @@ mod tests {
     fn test_stack_overflow() {
         let mut stack = Stack::new(2);
         assert!(stack.push(1).is_ok());
-        assert!(stack.push(2).is_ok());
-        assert_eq!(stack.push(3), Err("stack-overflow".to_string()));
+        assert_eq!(stack.push(2), Err("stack-overflow".to_string()));
     }
 
     #[test]
@@ -206,22 +175,5 @@ mod tests {
         let mut stack = Stack::new(10);
         stack.push(42).unwrap();
         assert_eq!(stack.peek().unwrap(), 42);
-    }
-
-    #[test]
-    fn test_peek_n() {
-        let mut stack = Stack::new(10);
-        stack.push(1).unwrap();
-        stack.push(2).unwrap();
-        stack.push(3).unwrap();
-        assert_eq!(stack.peek_n(0).unwrap(), 3);
-        assert_eq!(stack.peek_n(1).unwrap(), 2);
-        assert_eq!(stack.peek_n(2).unwrap(), 1);
-    }
-
-    #[test]
-    fn test_peek_n_underflow() {
-        let stack = Stack::new(10);
-        assert!(stack.peek_n(0).is_err());
     }
 }
