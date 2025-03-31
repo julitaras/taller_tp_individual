@@ -381,7 +381,7 @@ impl Interpreter {
 
     fn end_definition(&mut self) -> Result<(), String> {
         if let Some((name, words)) = self.compiling.take() {
-            self.dict.insert(name, Rc::new(Word::Words(words))); // Almacena la definición en el diccionario.
+            self.dict.insert(name, Rc::new(Word::Words(words)));
             Ok(())
         } else {
             Err("invalid-word".to_string())
@@ -430,7 +430,7 @@ impl Interpreter {
 
     fn run_words(&mut self, words: &[Rc<Word>]) -> Result<(), String> {
         for w in words {
-            self.run_word(w)?; // Pasamos una referencia en lugar de clonar.
+            self.run_word(w)?;
         }
         Ok(())
     }
@@ -536,9 +536,7 @@ mod tests {
     #[test]
     fn test_output_operations() {
         let mut interpreter = Interpreter::new(1024);
-        interpreter.parse_line("65 EMIT").unwrap(); // ASCII de 'A'
-        // No hay una forma directa de capturar el stdout en pruebas unitarias estándar,
-        // pero puedes verificar que no haya errores y que la pila esté vacía.
+        interpreter.parse_line("65 EMIT").unwrap();
         assert_eq!(interpreter.stack_to_vec(), vec![]);
     }
 }
