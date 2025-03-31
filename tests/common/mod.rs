@@ -1,4 +1,3 @@
-
 #![allow(dead_code)]
 use std::env;
 use std::fs::{File, read_to_string, remove_file};

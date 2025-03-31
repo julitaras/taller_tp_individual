@@ -78,52 +78,80 @@ pub fn tokenize(input: &str) -> Vec<Word> {
     let mut tokens = Vec::new();
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0;
+
     while i < chars.len() {
-        // Saltar espacios fuera de tokens
         if chars[i].is_whitespace() {
-            i += 1;
+            i += 1; // Saltar espacios
             continue;
         }
-        // Si se detecta un literal a partir de la secuencia exacta: ."
-        // Según la documentación, debe reconocerse a partir de: .\"<espacio>
-        if i + 2 < chars.len() && chars[i] == '.' && chars[i + 1] == '"' && chars[i + 2] == ' ' {
-            i += 3; // saltamos .", y el espacio
-            let start = i;
-            while i < chars.len() && chars[i] != '"' {
-                i += 1;
-            }
-            if i < chars.len() && chars[i] == '"' {
-                let literal: String = chars[start..i].iter().collect();
+
+        if is_string_literal_start(&chars, i) {
+            if let Some((literal, new_index)) = extract_string_literal(&chars, i) {
                 tokens.push(Word::StringLiteral(literal));
-                i += 1; // saltamos la comilla de cierre
+                i = new_index;
             } else {
-                // Literal sin cierre: se retorna vector vacío
-                return Vec::new();
+                return Vec::new(); // Literal sin cierre
             }
         } else {
-            // Caso normal: acumulamos un token hasta el siguiente espacio
-            let start = i;
-            while i < chars.len() && !chars[i].is_whitespace() {
-                i += 1;
-            }
-            let token_str: String = chars[start..i].iter().collect();
-            if let Ok(n) = token_str.parse::<i16>() {
-                tokens.push(Word::Number(n));
-            } else {
-                tokens.push(Word::Words(token_str));
-            }
+            let (token, new_index) = extract_token(&chars, i);
+            tokens.push(token);
+            i = new_index;
         }
     }
-    // Si hay literales consecutivos, los fusionamos insertando un espacio entre ellos.
+
+    merge_string_literals(tokens)
+}
+
+/// Verifica si el token actual es el inicio de un literal de cadena.
+fn is_string_literal_start(chars: &[char], i: usize) -> bool {
+    i + 2 < chars.len() && chars[i] == '.' && chars[i + 1] == '"' && chars[i + 2] == ' '
+}
+
+/// Extrae un literal de cadena del input.
+fn extract_string_literal(chars: &[char], start: usize) -> Option<(String, usize)> {
+    let mut i = start + 3; // Saltar ."<espacio>
+    let literal_start = i;
+
+    while i < chars.len() && chars[i] != '"' {
+        i += 1;
+    }
+
+    if i < chars.len() && chars[i] == '"' {
+        let literal: String = chars[literal_start..i].iter().collect();
+        Some((literal, i + 1)) // Saltar la comilla de cierre
+    } else {
+        None // Literal sin cierre
+    }
+}
+
+/// Extrae un token (número o palabra) del input.
+fn extract_token(chars: &[char], start: usize) -> (Word, usize) {
+    let mut i = start;
+
+    while i < chars.len() && !chars[i].is_whitespace() {
+        i += 1;
+    }
+
+    let token_str: String = chars[start..i].iter().collect();
+    if let Ok(n) = token_str.parse::<i16>() {
+        (Word::Number(n), i)
+    } else {
+        (Word::Words(token_str), i)
+    }
+}
+
+/// Fusiona literales de cadena consecutivos en un solo token.
+fn merge_string_literals(tokens: Vec<Word>) -> Vec<Word> {
     let mut merged = Vec::new();
     let mut i = 0;
+
     while i < tokens.len() {
         if let Word::StringLiteral(s) = &tokens[i] {
             let mut combined = s.clone();
             i += 1;
+
             while i < tokens.len() {
                 if let Word::StringLiteral(s2) = &tokens[i] {
-                    // Se inserta un espacio entre literales consecutivos
                     combined.push(' ');
                     combined.push_str(s2);
                     i += 1;
@@ -131,12 +159,14 @@ pub fn tokenize(input: &str) -> Vec<Word> {
                     break;
                 }
             }
+
             merged.push(Word::StringLiteral(combined));
         } else {
             merged.push(tokens[i].clone());
             i += 1;
         }
     }
+
     merged
 }
 
