@@ -1,12 +1,81 @@
+//! Módulo para la tokenización de código Forth.
+//!
+//! Este módulo proporciona la definición del tipo `Token` y la función `tokenize`,
+//! que convierte una cadena de entrada en una secuencia de tokens. Los tokens son
+//! las unidades básicas del lenguaje Forth y se clasifican en tres tipos:
+//! - **Números** (`Number`): Representan valores enteros (`i16`).
+//! - **Palabras** (`Word`): Representan identificadores o comandos del lenguaje.
+//! - **Literales de cadena** (`StringLiteral`): Representan cadenas de texto delimitadas por `."` y `"`.
+//!
+//! Este módulo también incluye pruebas unitarias para verificar el correcto funcionamiento
+//! de la tokenización.
+//!
+//! # Ejemplo de uso
+//! ```rust
+//! use taller_tp_individual::parser::{Token, tokenize};
+//!
+//! let input = r#".\"Hello World\" 42 +"#;
+//! let tokens = tokenize(input);
+//! assert_eq!(tokens, vec![
+//!     Token::StringLiteral("Hello World".to_string()),
+//!     Token::Number(42),
+//!     Token::Word("+".to_string())
+//! ]);
+//! ```
+
 use std::ops::ControlFlow;
 
+/// Representa un token del lenguaje Forth.
+///
+/// Los tokens son las unidades básicas del lenguaje Forth y se clasifican en tres tipos:
+/// - `Number`: Representa un número entero (`i16`).
+/// - `Word`: Representa una palabra o comando.
+/// - `StringLiteral`: Representa un literal de cadena delimitado por `."` y `"`.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::parser::Token;
+///
+/// let number = Token::Number(42);
+/// let word = Token::Word("+".to_string());
+/// let string_literal = Token::StringLiteral("Hello, World!".to_string());
+/// ```
 #[derive(Debug, PartialEq)]
 pub enum Token {
+    /// Representa un número entero.
     Number(i16),
+    /// Representa una palabra (word).
     Word(String),
+    /// Representa un literal de cadena, generado a partir de la sintaxis ."
     StringLiteral(String),
 }
 
+/// Tokeniza el input de código Forth.
+///
+/// Esta función convierte una cadena de entrada en una lista de tokens (`Vec<Token>`).
+/// Los tokens se dividen utilizando espacios en blanco como delimitadores. Si un token
+/// comienza con `."`, se interpreta como el inicio de un literal de cadena y se acumula
+/// hasta encontrar la comilla de cierre (`"`).
+///
+/// # Parámetros
+/// - `input`: La cadena de entrada con el código Forth.
+///
+/// # Retorna
+/// Una lista de tokens (`Vec<Token>`) que representan el código fuente. Si la cadena de entrada
+/// está vacía, retorna un vector vacío.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::parser::{Token, tokenize};
+///
+/// let input = r#".\"Hello World\" 42 +"#;
+/// let tokens = tokenize(input);
+/// assert_eq!(tokens, vec![
+///     Token::StringLiteral("Hello World".to_string()),
+///     Token::Number(42),
+///     Token::Word("+".to_string())
+/// ]);
+/// ```
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut iter = input.split_whitespace().peekable();
@@ -20,6 +89,30 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     tokens
 }
 
+/// Procesa un token de entrada y lo agrega al vector de tokens.
+///
+/// Esta función analiza una palabra del input y la clasifica como uno de los tres tipos de tokens:
+/// - Si comienza con `."`, se procesa como un literal de cadena.
+/// - Si puede ser parseada como un número entero (`i16`), se clasifica como `Number`.
+/// - En caso contrario, se clasifica como `Word`.
+///
+/// # Parámetros
+/// - `tokens`: Vector de tokens acumulados.
+/// - `iter`: Iterador sobre los tokens (palabras) del input.
+/// - `word`: La palabra actual a procesar.
+///
+/// # Retorna
+/// Un `ControlFlow<()>` para indicar si se debe salir del loop o continuar.
+///
+/// # Ejemplo
+/// ```rust
+/// use taller_tp_individual::parser::{Token, process_word};
+///
+/// let mut tokens = Vec::new();
+/// let mut iter = "42 +".split_whitespace().peekable();
+/// process_word(&mut tokens, &mut iter, "42");
+/// assert_eq!(tokens, vec![Token::Number(42)]);
+/// ```
 fn process_word(
     tokens: &mut Vec<Token>,
     iter: &mut std::iter::Peekable<std::str::SplitWhitespace<'_>>,

@@ -1,10 +1,49 @@
+//! Módulo de la pila (Stack) para el intérprete Forth.
+//!
+//! Este módulo proporciona una estructura de datos para almacenar números enteros (`i16`) con una capacidad máxima.
+//! La pila es utilizada por el intérprete Forth para realizar operaciones como empujar, sacar y consultar valores.
+//!
+//! # Funcionalidades principales
+//! - Crear una pila con capacidad máxima (`Stack::new`).
+//! - Empujar valores a la pila (`Stack::push`).
+//! - Sacar valores de la pila (`Stack::pop`).
+//! - Consultar el valor superior de la pila (`Stack::peek`).
+//! - Consultar valores en posiciones específicas desde el tope (`Stack::peek_n`).
+//! - Obtener todos los valores de la pila como un vector (`Stack::to_vec`).
+
+/// Estructura que representa una pila con capacidad máxima.
+///
+/// La pila almacena números enteros (`i16`) y tiene un tamaño máximo definido al momento de su creación.
+/// Si se intenta empujar un valor cuando la pila está llena, se retorna un error de "stack-overflow".
+/// Si se intenta sacar o consultar un valor cuando la pila está vacía, se retorna un error de "stack-underflow".
+///
+/// # Campos
+/// - `data`: Vector interno que almacena los valores de la pila.
+/// - `max_size`: Tamaño máximo de la pila.
 #[derive(Debug, PartialEq)]
 pub struct Stack {
+    /// Representa la información que guardamos.
     data: Vec<i16>,
+    /// Representa el tamaño máximo del stack.
     max_size: usize,
 }
 
 impl Stack {
+    /// Crea una nueva pila con la capacidad máxima indicada.
+    ///
+    /// # Parámetros
+    /// - `max_size`: Tamaño máximo de la pila.
+    ///
+    /// # Retorna
+    /// Una nueva instancia de `Stack` con la capacidad especificada.
+    ///
+    /// # Ejemplo
+    /// ```rust
+    /// use taller_tp_individual::stack::Stack;
+    ///
+    /// let stack = Stack::new(10);
+    /// assert_eq!(stack.to_vec(), &[]);
+    /// ```
     pub fn new(max_size: usize) -> Self {
         Stack {
             data: Vec::new(),
@@ -12,6 +51,26 @@ impl Stack {
         }
     }
 
+    /// Empuja un valor en la pila.
+    ///
+    /// Si la pila ya alcanzó su capacidad máxima, se retorna un error de "stack-overflow".
+    ///
+    /// # Parámetros
+    /// - `val`: Valor a empujar en la pila.
+    ///
+    /// # Retorna
+    /// - `Ok(())`: Si el valor se empujó correctamente.
+    /// - `Err(String)`: Si la pila está llena.
+    ///
+    /// # Ejemplo
+    /// ```rust
+    /// use taller_tp_individual::stack::Stack;
+    ///
+    /// let mut stack = Stack::new(2);
+    /// assert!(stack.push(10).is_ok());
+    /// assert!(stack.push(20).is_ok());
+    /// assert_eq!(stack.push(30), Err("stack-overflow".to_string()));
+    /// ```
     pub fn push(&mut self, val: i16) -> Result<(), String> {
         if self.data.len() >= self.max_size {
             return Err("stack-overflow".to_string());
@@ -20,10 +79,45 @@ impl Stack {
         Ok(())
     }
 
+    /// Saca el valor superior de la pila.
+    ///
+    /// Si la pila está vacía, se retorna un error de "stack-underflow".
+    ///
+    /// # Retorna
+    /// - `Ok(i16)`: El valor superior de la pila.
+    /// - `Err(String)`: Si la pila está vacía.
+    ///
+    /// # Ejemplo
+    /// ```rust
+    /// use taller_tp_individual::stack::Stack;
+    ///
+    /// let mut stack = Stack::new(2);
+    /// stack.push(10).unwrap();
+    /// stack.push(20).unwrap();
+    /// assert_eq!(stack.pop(), Ok(20));
+    /// assert_eq!(stack.pop(), Ok(10));
+    /// assert_eq!(stack.pop(), Err("stack-underflow".to_string()));
+    /// ```
     pub fn pop(&mut self) -> Result<i16, String> {
         self.data.pop().ok_or_else(|| "stack-underflow".to_string())
     }
 
+    /// Devuelve el valor superior de la pila sin removerlo.
+    ///
+    /// Si la pila está vacía, se retorna un error de "stack-underflow".
+    ///
+    /// # Retorna
+    /// - `Ok(i16)`: El valor superior de la pila.
+    /// - `Err(String)`: Si la pila está vacía.
+    ///
+    /// # Ejemplo
+    /// ```rust
+    /// use taller_tp_individual::stack::Stack;
+    ///
+    /// let mut stack = Stack::new(2);
+    /// stack.push(42).unwrap();
+    /// assert_eq!(stack.peek(), Ok(42));
+    /// ```
     pub fn peek(&self) -> Result<i16, String> {
         self.data
             .last()
@@ -31,6 +125,30 @@ impl Stack {
             .ok_or_else(|| "stack-underflow".to_string())
     }
 
+    /// Devuelve el n-ésimo elemento desde la parte superior de la pila (0 es el tope).
+    ///
+    /// Si la pila no tiene suficientes elementos, se retorna un error de "stack-underflow".
+    ///
+    /// # Parámetros
+    /// - `n`: Índice del elemento a consultar desde el tope (0 es el tope, 1 es el siguiente, etc.).
+    ///
+    /// # Retorna
+    /// - `Ok(i16)`: El valor en la posición especificada.
+    /// - `Err(String)`: Si la pila no tiene suficientes elementos.
+    ///
+    /// # Ejemplo
+    /// ```rust
+    /// use taller_tp_individual::stack::Stack;
+    ///
+    /// let mut stack = Stack::new(3);
+    /// stack.push(1).unwrap();
+    /// stack.push(2).unwrap();
+    /// stack.push(3).unwrap();
+    /// assert_eq!(stack.peek_n(0), Ok(3));
+    /// assert_eq!(stack.peek_n(1), Ok(2));
+    /// assert_eq!(stack.peek_n(2), Ok(1));
+    /// assert_eq!(stack.peek_n(3), Err("stack-underflow".to_string()));
+    /// ```
     pub fn peek_n(&self, n: usize) -> Result<i16, String> {
         if self.data.len() > n {
             Ok(self.data[self.data.len() - 1 - n])
@@ -39,6 +157,23 @@ impl Stack {
         }
     }
 
+    /// Devuelve una referencia al vector interno de datos.
+    ///
+    /// Los elementos están en el mismo orden en que fueron insertados (FIFO).
+    ///
+    /// # Retorna
+    /// Una referencia al vector interno de la pila.
+    ///
+    /// # Ejemplo
+    /// ```rust
+    /// use taller_tp_individual::stack::Stack;
+    ///
+    /// let mut stack = Stack::new(3);
+    /// stack.push(1).unwrap();
+    /// stack.push(2).unwrap();
+    /// stack.push(3).unwrap();
+    /// assert_eq!(stack.to_vec(), &[1, 2, 3]);
+    /// ```
     pub fn to_vec(&self) -> &[i16] {
         &self.data
     }
