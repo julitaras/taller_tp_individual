@@ -1,6 +1,6 @@
 //! Módulo del intérprete Forth.
 //!
-//! Este módulo implementa la lógica principal del intérprete para el lenguaje Forth.
+//! Este módulo implementa la lógica principal del intérprete para el lenguaje Forth. 
 //! Proporciona funciones para ejecutar tokens, manejar definiciones de palabras (words),
 //! estructuras condicionales y operaciones aritméticas y lógicas.
 //!
@@ -32,22 +32,22 @@ use crate::stack::Stack;
 use std::collections::HashMap;
 
 /// Ejecuta una secuencia de tokens sobre la pila utilizando el diccionario para definiciones.
-///
+/// 
 /// Esta función procesa cada token en el orden en que aparece y realiza la operación correspondiente:
 /// - Empuja números a la pila.
 /// - Ejecuta palabras definidas en el diccionario.
 /// - Maneja literales de cadena.
 /// - Ejecuta operaciones aritméticas, lógicas y condicionales.
-///
+/// 
 /// # Parámetros
 /// - `stack`: Pila sobre la que se realizarán las operaciones.
 /// - `tokens`: Slice de tokens obtenido a partir del código fuente.
 /// - `dict`: Diccionario que mapea nombres de palabras (words) a slices de tokens (sus definiciones).
-///
+/// 
 /// # Retorna
 /// - `Ok(())` si la ejecución se realizó sin errores.
 /// - `Err(String)` si ocurre algún error durante la ejecución.
-///
+/// 
 /// # Ejemplo
 /// ```rust
 /// use taller_tp_individual::interpreter::execute_tokens;
@@ -184,19 +184,19 @@ fn handle_word_token<'a>(
 }
 
 /// Define una nueva palabra (word).
-///
+/// 
 /// La definición tiene la sintaxis: `: <word-name> <word-body> ;`.
 /// Esta función almacena la definición en el diccionario `dict` como un slice de tokens.
-///
+/// 
 /// # Parámetros
 /// - `tokens`: Slice de tokens que contiene la definición.
 /// - `i`: Índice actual en el slice de tokens.
 /// - `dict`: Diccionario donde se almacenará la definición.
-///
+/// 
 /// # Retorna
 /// - `Ok(usize)`: El índice del siguiente token después de la definición.
 /// - `Err(String)`: Si la definición es inválida.
-///
+/// 
 /// # Ejemplo
 /// ```rust
 /// use taller_tp_individual::interpreter::handle_definition;
@@ -251,19 +251,19 @@ fn handle_definition<'a>(
 }
 
 /// Ejecuta una estructura condicional en el lenguaje Forth.
-///
+/// 
 /// La sintaxis es: `IF <true-branch> [ELSE <false-branch>] THEN`.
-///
+/// 
 /// # Parámetros
 /// - `stack`: Pila sobre la que se realizarán las operaciones.
 /// - `tokens`: Slice de tokens que contiene la estructura condicional.
 /// - `if_index`: Índice del token `IF`.
 /// - `dict`: Diccionario que mapea nombres de palabras a slices de tokens.
-///
+/// 
 /// # Retorna
 /// - `Ok(usize)`: El índice del siguiente token después de `THEN`.
 /// - `Err(String)`: Si la estructura condicional es inválida.
-///
+/// 
 /// # Ejemplo
 /// ```rust
 /// use taller_tp_individual::interpreter::execute_conditional;
@@ -308,7 +308,7 @@ fn execute_conditional<'a>(
 }
 
 /// Busca los índices de los tokens "ELSE" y "THEN" en una estructura condicional.
-///
+/// 
 /// Retorna una tupla `(else_index, then_index)`.
 fn find_else_then_indices(
     tokens: &[Token],
@@ -338,18 +338,18 @@ fn find_else_then_indices(
 }
 
 /// Maneja la ejecución de las palabras (words) built-in.
-///
+/// 
 /// Esta función ejecuta operaciones aritméticas, lógicas y otras palabras predefinidas.
 /// Si la palabra no se reconoce, retorna el error `"?"`.
-///
+/// 
 /// # Parámetros
 /// - `stack`: Pila sobre la que se realizarán las operaciones.
 /// - `word`: Palabra a ejecutar.
-///
+/// 
 /// # Retorna
 /// - `Ok(())` si la operación se ejecutó correctamente.
 /// - `Err(String)` si ocurre un error o la palabra no se reconoce.
-///
+/// 
 /// # Ejemplo
 /// ```rust
 /// use taller_tp_individual::interpreter::handle_word;
@@ -414,7 +414,7 @@ fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
             let code = stack.pop()?;
             let c = std::char::from_u32(code as u32)
                 .ok_or_else(|| "Valor para EMIT no es un carácter válido".to_string())?;
-            print!("{}", c);
+            print!("{} ", c);
             Ok(())
         }
         "." => {
@@ -431,7 +431,7 @@ fn handle_word(stack: &mut Stack, word: &str) -> Result<(), String> {
 }
 
 /// Aplica una operación binaria sobre los dos valores superiores de la pila.
-///
+/// 
 /// Retorna `Ok(())` si la operación se aplica correctamente o un `Err` con el mensaje de error.
 fn apply_binary_op<F>(stack: &mut Stack, op: F) -> Result<(), String>
 where

@@ -56,7 +56,7 @@ fn test_emit() {
     let output = run_binary_with_file(&temp_file);
 
     let output_lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
-    let expected_lines = vec!["A"];
+    let expected_lines = vec!["A "];
 
     assert_eq!(
         output_lines, expected_lines,
@@ -89,7 +89,7 @@ fn test_cr() {
 fn test_string_literal() {
     //TODO: Ver el tema de los espacios: https://skilldrick.github.io/easyforth/#generating-output
     // ." Hola Mundo" CR -> Imprime la cadena "Hola Mundo"
-    let code = ".\"Hola Mundo\" CR";
+    let code = ".\" Hola Mundo\" CR";
     let temp_file = create_temp_file("test_string_literal.fth", code);
     let output = run_binary_with_file(&temp_file);
 
@@ -895,8 +895,6 @@ fn test_limited_stack() {
 
 // Casos de la catedra - HEAVY
 
-// Casos de la catedra - ERROR
-
 // Casos de la catedra - PRINT
 #[test]
 fn test_dot_without_leftover() {
@@ -992,7 +990,7 @@ fn test_dot_quote_hello_world() {
 fn test_dot_quote_multiple_whitespace() {
     run_test_case_stdout(
         "dot-quote multiple whitespace",
-        ".\"hello      world!\"",
+        ".\" hello      world!\"",
         "hello      world!",
         &[]
     );
@@ -1024,20 +1022,35 @@ fn run_test_case_stdout(test_name: &str, code: &str, expected_output: &str, expe
     let filename = format!("{}.fth", test_name.replace(' ', "_"));
     let temp_file = create_temp_file(&filename, code);
     let stdout_output = run_binary_with_file(&temp_file);
-    // Comparamos la salida estándar (removiendo espacios finales y \r si fuera necesario)
-    let normalized_stdout = stdout_output.trim().replace("\r", "");
-    let normalized_expected = expected_output.trim().replace("\r", "");
+
+    // Normalizamos la salida estándar para evitar problemas con espacios y saltos de línea
+    let normalized_stdout = stdout_output
+        .lines()
+        .map(|line| line.trim_end()) // Removemos espacios al final de cada línea
+        .collect::<Vec<_>>()
+        .join("\n"); // Reunimos las líneas normalizadas con saltos de línea
+
+    let normalized_expected = expected_output
+        .lines()
+        .map(|line| line.trim_end()) // Removemos espacios al final de cada línea
+        .collect::<Vec<_>>()
+        .join("\n"); // Reunimos las líneas normalizadas con saltos de línea
+
+    // Comparamos la salida estándar
     assert_eq!(
         normalized_stdout, normalized_expected,
         "La salida (stdout) no coincide para el test '{}'", test_name
     );
-    // Verificamos también el estado final de la pila.
+
+    // Verificamos también el estado final de la pila
     let output_lines = read_stack_output();
     let expected_lines: Vec<String> = expected_stack.iter().map(|n| n.to_string()).collect();
     assert_eq!(
         output_lines, expected_lines,
         "El estado final de la pila no coincide para el test '{}'", test_name
     );
+
+    // Limpieza de archivos temporales
     cleanup_temp_file(&temp_file);
     remove_file("stack.fth").expect("No se pudo borrar stack.fth");
 }
