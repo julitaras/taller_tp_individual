@@ -1,3 +1,4 @@
+
 #![allow(dead_code)]
 use std::env;
 use std::fs::{File, read_to_string, remove_file};
@@ -14,7 +15,7 @@ pub fn run_test_case_stdout_with_stack_size(
 ) {
     let filename = format!("{}.fth", test_name.replace(' ', "_"));
     let temp_file = create_temp_file(&filename, code);
-    let stdout_outputg = run_binary_with_file_and_stack_size(&temp_file, stack_size);
+    let stdout_output = run_binary_with_file_and_stack_size(&temp_file, stack_size);
 
     let normalized_stdout = stdout_output.trim().replace("\r", "");
     let normalized_expected = expected_output.trim().replace("\r", "");
