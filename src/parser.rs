@@ -23,8 +23,6 @@
 //! ]);
 //! ```
 
-// use std::ops::ControlFlow;
-
 /// Representa un token del lenguaje Forth.
 ///
 /// Los tokens son las unidades básicas del lenguaje Forth y se clasifican en tres tipos:
@@ -141,89 +139,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     }
     merged
 }
-
-/// Procesa un token de entrada y lo agrega al vector de tokens.
-///
-/// Esta función analiza una palabra del input y la clasifica como uno de los tres tipos de tokens:
-/// - Si comienza con `."`, se procesa como un literal de cadena.
-/// - Si puede ser parseada como un número entero (`i16`), se clasifica como `Number`.
-/// - En caso contrario, se clasifica como `Word`.
-///
-/// # Parámetros
-/// - `tokens`: Vector de tokens acumulados.
-/// - `iter`: Iterador sobre los tokens (palabras) del input.
-/// - `word`: La palabra actual a procesar.
-///
-/// # Retorna
-/// Un `ControlFlow<()>` para indicar si se debe salir del loop o continuar.
-///
-/// # Ejemplo
-/// ```rust
-/// use taller_tp_individual::parser::{Token, process_word};
-///
-/// let mut tokens = Vec::new();
-/// let mut iter = "42 +".split_whitespace().peekable();
-/// process_word(&mut tokens, &mut iter, "42");
-/// assert_eq!(tokens, vec![Token::Number(42)]);
-/// ```
-// fn process_word(
-//     tokens: &mut Vec<Token>,
-//     iter: &mut std::iter::Peekable<std::str::SplitWhitespace<'_>>,
-//     word: &str,
-// ) -> std::ops::ControlFlow<()> {
-//     if word == ".\"" {
-//         let mut literal = String::new();
-//         let mut found_end = false;
-
-//         for next_token in iter.by_ref() {
-//             if next_token.ends_with('"') {
-//                 if !literal.is_empty() {
-//                     literal.push(' ');
-//                 }
-//                 literal.push_str(next_token.trim_end_matches('"'));
-//                 found_end = true;
-//                 break;
-//             } else {
-//                 if !literal.is_empty() {
-//                     literal.push(' ');
-//                 }
-//                 literal.push_str(next_token);
-//             }
-//         }
-
-//         if found_end {
-//             tokens.push(Token::StringLiteral(literal));
-//         }
-//         return std::ops::ControlFlow::Break(());
-//     } else if let Some(stripped) = word.strip_prefix(".\" ") {
-//         let mut literal = stripped.to_string();
-
-//         if literal.ends_with('"') {
-//             literal.pop();
-//             tokens.push(Token::StringLiteral(literal));
-//             return std::ops::ControlFlow::Break(());
-//         }
-
-//         for next_token in iter.by_ref() {
-//             literal.push(' ');
-//             if next_token.ends_with('"') {
-//                 literal.push_str(next_token.trim_end_matches('"'));
-//                 tokens.push(Token::StringLiteral(literal));
-//                 return std::ops::ControlFlow::Break(());
-//             } else {
-//                 literal.push_str(next_token);
-//             }
-//         }
-
-//         return std::ops::ControlFlow::Break(());
-//     } else if let Ok(n) = word.parse::<i16>() {
-//         tokens.push(Token::Number(n));
-//     } else {
-//         tokens.push(Token::Word(word.to_string()));
-//     }
-
-//     std::ops::ControlFlow::Continue(())
-// }
 
 #[cfg(test)]
 mod tests {

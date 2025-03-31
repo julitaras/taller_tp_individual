@@ -295,16 +295,15 @@ fn execute_conditional<'a>(
     let cond = stack.pop()?;
     let condition_true = cond != 0;
 
-    let then_idx = then_index.unwrap();
     if condition_true {
-        let end = else_index.unwrap_or(then_idx);
+        let end = else_index.unwrap_or(then_index);
         let branch_tokens = &tokens[if_index + 1..end];
         execute_tokens(stack, branch_tokens, dict)?;
-    } else if let Some(else_idx) = else_index {
-        let branch_tokens = &tokens[else_idx + 1..then_idx];
+    } else if let Some(e_idx) = else_index {
+        let branch_tokens = &tokens[e_idx + 1..then_index];
         execute_tokens(stack, branch_tokens, dict)?;
     }
-    Ok(then_idx + 1)
+    Ok(then_index + 1)
 }
 
 /// Busca los índices de los tokens "ELSE" y "THEN" en una estructura condicional.
@@ -313,28 +312,27 @@ fn execute_conditional<'a>(
 fn find_else_then_indices(
     tokens: &[Token],
     if_index: usize,
-) -> Result<(Option<usize>, Option<usize>), String> {
-    let mut else_index: Option<usize> = None;
-    let mut then_index: Option<usize> = None;
-    let mut j = if_index + 1;
-
-    while j < tokens.len() {
-        if let Token::Word(ref w) = tokens[j] {
+) -> Result<(Option<usize>, usize), String> {
+    // Devuelve (opcional_else_index, then_index)
+    let mut nest = 0;
+    let mut else_index = None;
+    for (j, token) in tokens.iter().enumerate().skip(if_index + 1) {
+        if let Token::Word(w) = token {
             let w_upper = w.to_uppercase();
-            if w_upper == "THEN" {
-                then_index = Some(j);
-                break;
-            } else if w_upper == "ELSE" {
+            if w_upper == "IF" {
+                nest += 1;
+            } else if w_upper == "THEN" {
+                if nest == 0 {
+                    return Ok((else_index, j));
+                } else {
+                    nest -= 1;
+                }
+            } else if w_upper == "ELSE" && nest == 0 && else_index.is_none() {
                 else_index = Some(j);
             }
         }
-        j += 1;
     }
-
-    if then_index.is_none() {
-        return Err("Estructura IF sin THEN".to_string());
-    }
-    Ok((else_index, then_index))
+    Err("Estructura IF sin THEN".to_string())
 }
 
 /// Maneja la ejecución de palabras (words) en el lenguaje Forth.
