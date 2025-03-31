@@ -121,7 +121,9 @@ fn process_word(
     if word == ".\"" {
         let mut literal = String::new();
         let mut found_end = false;
-        while let Some(next_token) = iter.next() {
+
+        // Cambiar `while let` a `for` loop
+        for next_token in iter.by_ref() {
             if next_token.ends_with('"') {
                 if !literal.is_empty() {
                     literal.push(' ');
@@ -136,18 +138,23 @@ fn process_word(
                 literal.push_str(next_token);
             }
         }
+
         if found_end {
             tokens.push(Token::StringLiteral(literal));
         }
         return std::ops::ControlFlow::Break(());
-    } else if word.starts_with(".\" ") {
-        let mut literal = word[3..].to_string();
+    } else if let Some(stripped) = word.strip_prefix(".\" ") {
+        // Usar `strip_prefix` en lugar de manipular manualmente el prefijo
+        let mut literal = stripped.to_string();
+
         if literal.ends_with('"') {
             literal.pop();
             tokens.push(Token::StringLiteral(literal));
             return std::ops::ControlFlow::Break(());
         }
-        while let Some(next_token) = iter.next() {
+
+        // Cambiar `while let` a `for` loop
+        for next_token in iter.by_ref() {
             literal.push(' ');
             if next_token.ends_with('"') {
                 literal.push_str(next_token.trim_end_matches('"'));
@@ -157,12 +164,14 @@ fn process_word(
                 literal.push_str(next_token);
             }
         }
+
         return std::ops::ControlFlow::Break(());
     } else if let Ok(n) = word.parse::<i16>() {
         tokens.push(Token::Number(n));
     } else {
         tokens.push(Token::Word(word.to_string()));
     }
+
     std::ops::ControlFlow::Continue(())
 }
 
