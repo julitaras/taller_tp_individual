@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Token {
     Number(i16),
     Word(String),
