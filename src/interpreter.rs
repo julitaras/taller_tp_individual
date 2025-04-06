@@ -539,4 +539,11 @@ mod tests {
         interpreter.parse_line("65 EMIT").unwrap();
         assert_eq!(interpreter.stack_to_vec(), vec![]);
     }
+
+    #[test]
+    fn test_limited_stack() {
+        let mut interpreter = Interpreter::new(2); // Pila con tamaño limitado
+        let result = interpreter.parse_line("1 2 3"); // Esto debería devolver "stack-overflow"
+        assert_eq!(result, Err("stack-overflow".to_string()));
+    }
 }

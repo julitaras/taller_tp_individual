@@ -47,7 +47,10 @@ fn main() {
 
     if let Err(e) = interpreter.parse_line(&code) {
         print!("{}", e);
-        interpreter = Interpreter::new(stack_size);
+
+        if e != "stack-overflow" {
+            interpreter = Interpreter::new(stack_size);
+        }
     }
 
     if let Err(e) = save_stack_to_file(&interpreter, "stack.fth") {

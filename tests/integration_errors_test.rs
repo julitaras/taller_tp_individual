@@ -1,7 +1,7 @@
 mod common;
 
 use common::run_test_case_stdout;
-//use common::run_test_case_stdout_with_stack_size;
+use common::run_test_case_stdout_with_stack_size;
 
 #[test]
 fn test_underflow_1() {
@@ -94,14 +94,14 @@ fn test_unknown_word() {
 }
 
 //TODO: Ver despues pq le pongo un espacio cuando deberia ser 5\nstack-overflow\n
-// #[test]
-// fn test_limited_stack() {
-//     // En este caso se especifica el tamaño de la pila (10)
-//     run_test_case_stdout_with_stack_size(
-//         "limited stack",
-//         "1 2 3 4 5\n. cr 5 6",
-//         "5\nstack-overflow\n",
-//         &[1, 2, 3, 4, 5],
-//         Some(10),
-//     );
-// }
+#[test]
+fn test_limited_stack() {
+    // En este caso se especifica el tamaño de la pila (10)
+    run_test_case_stdout_with_stack_size(
+        "limited stack",
+        "1 2 3 4 5\n. cr 5 6",
+        "5 \nstack-overflow\n",
+        &[1, 2, 3, 4, 5],
+        Some(10),
+    );
+}

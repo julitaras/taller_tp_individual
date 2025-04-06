@@ -22,9 +22,7 @@
 /// - `max_size`: Tamaño máximo de la pila en bytes.
 #[derive(Debug, PartialEq)]
 pub struct Stack {
-    /// Representa la información que guardamos.
     data: Vec<i16>,
-    /// Representa el tamaño máximo del stack.
     max_size: usize,
 }
 
@@ -72,13 +70,17 @@ impl Stack {
     /// assert_eq!(stack.push(30), Err("stack-overflow".to_string()));
     /// ```
     pub fn push(&mut self, value: i16) -> Result<(), String> {
-        let max_elements = self.max_size / std::mem::size_of::<i16>(); // Calcula el número máximo de elementos.
-        if self.data.len() >= max_elements {
-            Err("stack-overflow".to_string())
-        } else {
-            self.data.push(value);
-            Ok(())
+        if self.data.len() >= self.max_size {
+            return Err("stack-overflow".to_string());
         }
+        self.data.push(value);
+        Ok(())
+        // let max_elements = self.max_size / std::mem::size_of::<i16>();
+        // if self.data.len() >= max_elements {
+        //     return Err("stack-overflow".to_string());
+        // }
+        // self.data.push(value);
+        // Ok(())
     }
 
     /// Saca el valor superior de la pila.
@@ -167,7 +169,8 @@ mod tests {
     fn test_stack_overflow() {
         let mut stack = Stack::new(2);
         assert!(stack.push(1).is_ok());
-        assert_eq!(stack.push(2), Err("stack-overflow".to_string()));
+        assert!(stack.push(2).is_ok());
+        assert_eq!(stack.push(3), Err("stack-overflow".to_string()));
     }
 
     #[test]
