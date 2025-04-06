@@ -33,15 +33,10 @@ use std::rc::Rc;
 /// conjunto de tokens (`tokens`) y un índice de token actual (`token_index`) para
 /// procesar líneas de entrada.
 pub struct Interpreter {
-    /// Pila utilizada para las operaciones.
     stack: Stack,
-    /// Diccionario de words predefinidas y definidas por el usuario.
     dict: HashMap<String, Rc<Word>>,
-    /// Estado de compilación para definir nuevas words.
     compiling: Option<(String, Vec<Rc<Word>>)>,
-    /// Tokens de la línea actual.
     tokens: Vec<String>,
-    /// Índice del token actual.
     token_index: usize,
 }
 
