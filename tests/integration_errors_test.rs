@@ -93,10 +93,8 @@ fn test_unknown_word() {
     run_test_case_stdout("unknown word", "foo", "?\n", &[]);
 }
 
-//TODO: Ver despues pq le pongo un espacio cuando deberia ser 5\nstack-overflow\n
 #[test]
 fn test_limited_stack() {
-    // En este caso se especifica el tamaño de la pila (10)
     run_test_case_stdout_with_stack_size(
         "limited stack",
         "1 2 3 4 5\n. cr 5 6",
