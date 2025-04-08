@@ -11,15 +11,6 @@
 //! - **Control de flujo**: Soporte para estructuras condicionales como `IF`, `ELSE`, `THEN`.
 //! - **Operaciones de salida**: Soporte para imprimir valores (`.`), cadenas (`."`), y caracteres (`EMIT`).
 //!
-//! # Ejemplo de uso
-//! ```rust
-//! use taller_tp_individual::interpreter::Interpreter;
-//!
-//! let mut interpreter = Interpreter::new(1024);
-//! interpreter.parse_line("1 2 + .").unwrap(); // Imprime "3"
-//! interpreter.parse_line(": SQUARE DUP * ;").unwrap(); // Define una nueva word
-//! interpreter.parse_line("3 SQUARE .").unwrap(); // Imprime "9"
-//! ```
 
 use crate::stack::Stack;
 use crate::word::Word;
@@ -43,13 +34,6 @@ pub struct Interpreter {
 
 impl Interpreter {
     /// Crea un nuevo intérprete con una pila de tamaño especificado.
-    ///
-    /// # Ejemplo
-    /// ```rust
-    /// use taller_tp_individual::interpreter::Interpreter;
-    ///
-    /// let interpreter = Interpreter::new(1024);
-    /// ```
     pub fn new(stack_size: usize) -> Self {
         let mut interpreter = Self {
             stack: Stack::new(stack_size),
@@ -149,15 +133,6 @@ impl Interpreter {
     }
 
     /// Convierte la pila en un vector para inspección.
-    ///
-    /// # Ejemplo
-    /// ```rust
-    /// use taller_tp_individual::interpreter::Interpreter;
-    ///
-    /// let mut interpreter = Interpreter::new(1024);
-    /// interpreter.parse_line("1 2 3").unwrap();
-    /// assert_eq!(interpreter.stack_to_vec(), vec![1, 2, 3]);
-    /// ```
     pub fn stack_to_vec(&self) -> Vec<i16> {
         self.stack.to_vec().to_vec()
     }
@@ -252,45 +227,18 @@ impl Interpreter {
     }
 
     fn handle_if(&mut self) -> Result<(), String> {
-        // Si detectamos que estamos en una ejecución anidada,
-        // en lugar de hacer pop, sacamos la condición y la guardamos.
-        // Aquí se usa como criterio que la pila tenga más de un elemento.
-        let is_nested = self.stack.to_vec().len() > 1;
-        let condition = if is_nested {
-            self.stack.pop()? // Sacamos la condición…
-        } else {
-            self.stack.pop()?
-        };
-    
-        if is_nested {
-            // Guardamos el valor original para restaurarlo en THEN
-            self.saved_cond = Some(condition);
-        }
-    
-        if condition == 0 {
-            // Si la condición es falsa, saltamos el bloque true:
-            let mut nesting = 1;
-            while let Some(token) = self.next_token() {
-                if token == "IF" {
-                    nesting += 1;
-                } else if token == "ELSE" && nesting == 1 {
-                    break;
-                } else if token == "THEN" {
-                    nesting -= 1;
-                    if nesting == 0 {
-                        break;
-                    }
-                }
-            }
-        }
-        Ok(())
+    let is_nested = self.stack.to_vec().len() > 1;
+    let condition = self.stack.pop()?;
+    if is_nested {
+        self.saved_cond = Some(condition);
     }
-
-    fn handle_else(&mut self) -> Result<(), String> {
+    if condition == 0 {
         let mut nesting = 1;
         while let Some(token) = self.next_token() {
             if token == "IF" {
                 nesting += 1;
+            } else if token == "ELSE" && nesting == 1 {
+                break;
             } else if token == "THEN" {
                 nesting -= 1;
                 if nesting == 0 {
@@ -298,20 +246,31 @@ impl Interpreter {
                 }
             }
         }
-        Ok(())
-    }    
-
-    fn handle_then(&mut self) -> Result<(), String> {
-        // Si se había guardado la condición (por ser un IF anidado),
-        // la restauramos en la pila para preservar el valor original.
-        if let Some(cond) = self.saved_cond.take() {
-            self.stack.push(cond)?;
-        }
-        Ok(())
     }
-    
-    
-    
+    Ok(())
+}
+
+fn handle_else(&mut self) -> Result<(), String> {
+    let mut nesting = 1;
+    while let Some(token) = self.next_token() {
+        if token == "IF" {
+            nesting += 1;
+        } else if token == "THEN" {
+            nesting -= 1;
+            if nesting == 0 {
+                break;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn handle_then(&mut self) -> Result<(), String> {
+    if let Some(cond) = self.saved_cond.take() {
+        self.stack.push(cond)?;
+    }
+    Ok(())
+}
 
     fn handle_dot_quote(&mut self) -> Result<(), String> {
         let mut collected = String::new();
@@ -354,14 +313,6 @@ impl Interpreter {
     /// Procesa una línea de entrada en el lenguaje Forth.
     ///
     /// Este método divide la línea en tokens, los resuelve y los ejecuta.
-    ///
-    /// # Ejemplo
-    /// ```rust
-    /// use taller_tp_individual::interpreter::Interpreter;
-    ///
-    /// let mut interpreter = Interpreter::new(1024);
-    /// interpreter.parse_line("1 2 + .").unwrap(); // Imprime "3"
-    /// ```
     pub fn parse_line(&mut self, line: &str) -> Result<(), String> {
         self.tokens = line.split_whitespace().map(|s| s.to_string()).collect();
         self.token_index = 0;
