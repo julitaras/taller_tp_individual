@@ -227,18 +227,34 @@ impl Interpreter {
     }
 
     fn handle_if(&mut self) -> Result<(), String> {
-    let is_nested = self.stack.to_vec().len() > 1;
-    let condition = self.stack.pop()?;
-    if is_nested {
-        self.saved_cond = Some(condition);
+        let is_nested = self.stack.to_vec().len() > 1;
+        let condition = self.stack.pop()?;
+        if is_nested {
+            self.saved_cond = Some(condition);
+        }
+        if condition == 0 {
+            let mut nesting = 1;
+            while let Some(token) = self.next_token() {
+                if token == "IF" {
+                    nesting += 1;
+                } else if token == "ELSE" && nesting == 1 {
+                    break;
+                } else if token == "THEN" {
+                    nesting -= 1;
+                    if nesting == 0 {
+                        break;
+                    }
+                }
+            }
+        }
+        Ok(())
     }
-    if condition == 0 {
+
+    fn handle_else(&mut self) -> Result<(), String> {
         let mut nesting = 1;
         while let Some(token) = self.next_token() {
             if token == "IF" {
                 nesting += 1;
-            } else if token == "ELSE" && nesting == 1 {
-                break;
             } else if token == "THEN" {
                 nesting -= 1;
                 if nesting == 0 {
@@ -246,31 +262,15 @@ impl Interpreter {
                 }
             }
         }
+        Ok(())
     }
-    Ok(())
-}
 
-fn handle_else(&mut self) -> Result<(), String> {
-    let mut nesting = 1;
-    while let Some(token) = self.next_token() {
-        if token == "IF" {
-            nesting += 1;
-        } else if token == "THEN" {
-            nesting -= 1;
-            if nesting == 0 {
-                break;
-            }
+    fn handle_then(&mut self) -> Result<(), String> {
+        if let Some(cond) = self.saved_cond.take() {
+            self.stack.push(cond)?;
         }
+        Ok(())
     }
-    Ok(())
-}
-
-fn handle_then(&mut self) -> Result<(), String> {
-    if let Some(cond) = self.saved_cond.take() {
-        self.stack.push(cond)?;
-    }
-    Ok(())
-}
 
     fn handle_dot_quote(&mut self) -> Result<(), String> {
         let mut collected = String::new();
