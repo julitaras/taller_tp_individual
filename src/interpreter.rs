@@ -273,31 +273,13 @@ impl Interpreter {
     }
 
     fn handle_dot_quote(&mut self) -> Result<(), String> {
-        let mut collected = String::new();
-        let mut found_end = false;
-
-        while let Some(token) = self.next_token() {
-            if token.ends_with("\"") {
-                let token_without_quote = token.trim_end_matches("\"");
-                collected.push_str(token_without_quote);
-                found_end = true;
-                break;
-            } else {
-                collected.push_str(&token);
-                collected.push(' ');
-            }
+        if let Some(literal) = self.next_token() {
+            let output = literal.trim_start();
+            print!("{}", output);
+            Ok(())
+        } else {
+            Err("Missing closing quote for .\"".to_string())
         }
-
-        if !found_end {
-            return Err("Missing closing quote for .\"".to_string());
-        }
-
-        if collected.ends_with(' ') {
-            collected.pop();
-        }
-
-        print!("{}", collected);
-        Ok(())
     }
 
     fn next_token(&mut self) -> Option<String> {
@@ -310,11 +292,47 @@ impl Interpreter {
         }
     }
 
+    fn tokenize(line: &str) -> Vec<String> {
+        let mut tokens = Vec::new();
+        let chars: Vec<char> = line.chars().collect();
+        let mut i = 0;
+
+        while i < chars.len() {
+            if chars[i].is_whitespace() {
+                i += 1;
+                continue;
+            }
+            if i + 1 < chars.len() && chars[i] == '.' && chars[i + 1] == '"' {
+                tokens.push(".\"".to_string());
+                i += 2;
+                let start = i;
+                while i < chars.len() && chars[i] != '"' {
+                    i += 1;
+                }
+                let literal: String = if i < chars.len() {
+                    chars[start..i].iter().collect()
+                } else {
+                    "".to_string()
+                };
+                tokens.push(literal);
+                i += 1;
+            } else {
+                let start = i;
+                while i < chars.len() && !chars[i].is_whitespace() {
+                    i += 1;
+                }
+                let token: String = chars[start..i].iter().collect();
+                tokens.push(token);
+            }
+        }
+        tokens
+    }
+
     /// Procesa una línea de entrada en el lenguaje Forth.
     ///
     /// Este método divide la línea en tokens, los resuelve y los ejecuta.
     pub fn parse_line(&mut self, line: &str) -> Result<(), String> {
-        self.tokens = line.split_whitespace().map(|s| s.to_string()).collect();
+        self.tokens = Interpreter::tokenize(line);
         self.token_index = 0;
 
         while let Some(token) = self.next_token() {

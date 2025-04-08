@@ -57,16 +57,15 @@ fn test_dot_quote_hello_world() {
     );
 }
 
-//TODO: Ver
-// #[test]
-// fn test_dot_quote_multiple_whitespace() {
-//     run_test_case_stdout(
-//         "dot-quote multiple whitespace",
-//         ".\" hello      world!\"",
-//         "hello      world!",
-//         &[],
-//     );
-// }
+#[test]
+fn test_dot_quote_multiple_whitespace() {
+    run_test_case_stdout(
+        "dot-quote multiple whitespace",
+        ".\" hello      world!\"",
+        "hello      world!",
+        &[],
+    );
+}
 
 //TODO: Ver
 // #[test]
