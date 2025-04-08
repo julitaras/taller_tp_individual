@@ -30,6 +30,7 @@ pub struct Interpreter {
     tokens: Vec<String>,
     token_index: usize,
     saved_cond: Option<i16>,
+    last_was_dot_quote: bool,
 }
 
 impl Interpreter {
@@ -42,6 +43,7 @@ impl Interpreter {
             token_index: 0,
             tokens: Vec::new(),
             saved_cond: None,
+            last_was_dot_quote: false,
         };
 
         interpreter.register_builtin_operations();
@@ -274,8 +276,13 @@ impl Interpreter {
 
     fn handle_dot_quote(&mut self) -> Result<(), String> {
         if let Some(literal) = self.next_token() {
+            // Si la última salida fue .\", agregamos un espacio antes
+            if self.last_was_dot_quote {
+                print!(" ");
+            }
             let output = literal.trim_start();
             print!("{}", output);
+            self.last_was_dot_quote = true;
             Ok(())
         } else {
             Err("Missing closing quote for .\"".to_string())
@@ -447,6 +454,7 @@ impl Interpreter {
             "THEN" => self.handle_then(),
             "CR" => {
                 println!();
+                self.last_was_dot_quote = false;
                 Ok(())
             }
             "." => {

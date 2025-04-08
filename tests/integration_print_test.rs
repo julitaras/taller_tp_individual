@@ -68,15 +68,15 @@ fn test_dot_quote_multiple_whitespace() {
 }
 
 //TODO: Ver
-// #[test]
-// fn test_dot_quote_multiples() {
-//     run_test_case_stdout(
-//         "dot-quote multiples",
-//         ".\" hello\"\n.\" world\"",
-//         "hello world",
-//         &[],
-//     );
-// }
+#[test]
+fn test_dot_quote_multiples() {
+    run_test_case_stdout(
+        "dot-quote multiples",
+        ".\" hello\"\n.\" world\"",
+        "hello world",
+        &[],
+    );
+}
 
 #[test]
 fn test_dot_quote_and_cr() {
