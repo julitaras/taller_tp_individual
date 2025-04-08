@@ -12,14 +12,6 @@
 //! - Obtener todos los valores de la pila como un vector (`Stack::to_vec`).
 
 /// Estructura que representa una pila con capacidad máxima.
-///
-/// La pila almacena números enteros (`i16`) y tiene un tamaño máximo definido al momento de su creación.
-/// Si se intenta empujar un valor cuando la pila está llena, se retorna un error de "stack-overflow".
-/// Si se intenta sacar o consultar un valor cuando la pila está vacía, se retorna un error de "stack-underflow".
-///
-/// # Campos
-/// - `data`: Vector interno que almacena los valores de la pila.
-/// - `max_size`: Tamaño máximo de la pila en bytes.
 #[derive(Debug, PartialEq)]
 pub struct Stack {
     data: Vec<i16>,
@@ -34,14 +26,6 @@ impl Stack {
     ///
     /// # Retorna
     /// Una nueva instancia de `Stack` con la capacidad especificada.
-    ///
-    /// # Ejemplo
-    /// ```rust
-    /// use taller_tp_individual::stack::Stack;
-    ///
-    /// let stack = Stack::new(10);
-    /// assert_eq!(stack.to_vec(), &[]);
-    /// ```
     pub fn new(max_size: usize) -> Self {
         Stack {
             data: Vec::new(),
@@ -59,16 +43,6 @@ impl Stack {
     /// # Retorna
     /// - `Ok(())`: Si el valor se empujó correctamente.
     /// - `Err(String)`: Si la pila está llena.
-    ///
-    /// # Ejemplo
-    /// ```rust
-    /// use taller_tp_individual::stack::Stack;
-    ///
-    /// let mut stack = Stack::new(2);
-    /// assert!(stack.push(10).is_ok());
-    /// assert!(stack.push(20).is_ok());
-    /// assert_eq!(stack.push(30), Err("stack-overflow".to_string()));
-    /// ```
     pub fn push(&mut self, value: i16) -> Result<(), String> {
         if self.data.len() >= self.max_size {
             return Err("stack-overflow".to_string());
@@ -90,18 +64,6 @@ impl Stack {
     /// # Retorna
     /// - `Ok(i16)`: El valor superior de la pila.
     /// - `Err(String)`: Si la pila está vacía.
-    ///
-    /// # Ejemplo
-    /// ```rust
-    /// use taller_tp_individual::stack::Stack;
-    ///
-    /// let mut stack = Stack::new(2);
-    /// stack.push(10).unwrap();
-    /// stack.push(20).unwrap();
-    /// assert_eq!(stack.pop(), Ok(20));
-    /// assert_eq!(stack.pop(), Ok(10));
-    /// assert_eq!(stack.pop(), Err("stack-underflow".to_string()));
-    /// ```
     pub fn pop(&mut self) -> Result<i16, String> {
         self.data.pop().ok_or_else(|| "stack-underflow".to_string())
     }
@@ -113,15 +75,6 @@ impl Stack {
     /// # Retorna
     /// - `Ok(i16)`: El valor superior de la pila.
     /// - `Err(String)`: Si la pila está vacía.
-    ///
-    /// # Ejemplo
-    /// ```rust
-    /// use taller_tp_individual::stack::Stack;
-    ///
-    /// let mut stack = Stack::new(2);
-    /// stack.push(42).unwrap();
-    /// assert_eq!(stack.peek(), Ok(42));
-    /// ```
     pub fn peek(&self) -> Result<i16, String> {
         self.data
             .last()
@@ -135,17 +88,6 @@ impl Stack {
     ///
     /// # Retorna
     /// Una referencia al vector interno de la pila.
-    ///
-    /// # Ejemplo
-    /// ```rust
-    /// use taller_tp_individual::stack::Stack;
-    ///
-    /// let mut stack = Stack::new(3);
-    /// stack.push(1).unwrap();
-    /// stack.push(2).unwrap();
-    /// stack.push(3).unwrap();
-    /// assert_eq!(stack.to_vec(), &[1, 2, 3]);
-    /// ```
     pub fn to_vec(&self) -> &[i16] {
         &self.data
     }

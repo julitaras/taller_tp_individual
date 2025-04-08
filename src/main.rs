@@ -68,11 +68,6 @@ fn main() {
 /// Una tupla `(filename, stack_size)`:
 /// - `filename`: Nombre del archivo fuente.
 /// - `stack_size`: Tamaño de la pila (por defecto, 1024 si no se especifica).
-///
-/// # Ejemplo
-/// ```bash
-/// cargo run archivo.fth [tamaño_stack]
-/// ```
 fn parse_args() -> (String, usize) {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
@@ -100,12 +95,6 @@ fn parse_args() -> (String, usize) {
 /// # Retorna
 /// - `Ok(String)`: Contenido del archivo si la lectura fue exitosa.
 /// - `Err(String)`: Mensaje de error si ocurrió un problema.
-///
-/// # Ejemplo
-/// ```rust
-/// let contenido = read_file("archivo.fth").unwrap();
-/// println!("{}", contenido);
-/// ```
 fn read_file(filename: &str) -> Result<String, String> {
     fs::read_to_string(filename).map_err(|e| format!("No se pudo leer el archivo: {}", e))
 }
@@ -122,12 +111,6 @@ fn read_file(filename: &str) -> Result<String, String> {
 /// # Retorna
 /// - `Ok(())`: Si la escritura fue exitosa.
 /// - `Err(String)`: Mensaje de error si ocurrió un problema.
-///
-/// # Ejemplo
-/// ```rust
-/// let interpreter = Interpreter::new(1024);
-/// save_stack_to_file(&interpreter, "stack.fth").unwrap();
-/// ```
 fn save_stack_to_file(interpreter: &Interpreter, filename: &str) -> Result<(), String> {
     let stack_vec = interpreter.stack_to_vec(); // Obtener el estado de la pila como un vector.
     let cwd = env::current_dir().map_err(|e| e.to_string())?;

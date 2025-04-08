@@ -3,14 +3,6 @@
 //! Este módulo proporciona la estructura `Interpreter`, que implementa un intérprete
 //! para el lenguaje Forth. El intérprete incluye un diccionario de words predefinidas,
 //! una pila para operaciones, y soporte para definir nuevas words y ejecutar código Forth.
-//!
-//! # Características principales
-//! - **Operaciones aritméticas**: Soporte para `+`, `-`, `*`, `/`.
-//! - **Operaciones de pila**: Soporte para `DUP`, `SWAP`, `DROP`, `ROT`, `OVER`.
-//! - **Operaciones lógicas**: Soporte para `NOT`, `AND`, `OR`, `=`, `<`, `>`.
-//! - **Control de flujo**: Soporte para estructuras condicionales como `IF`, `ELSE`, `THEN`.
-//! - **Operaciones de salida**: Soporte para imprimir valores (`.`), cadenas (`."`), y caracteres (`EMIT`).
-//!
 
 use crate::stack::Stack;
 use crate::word::Word;
