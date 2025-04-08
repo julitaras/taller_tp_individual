@@ -378,16 +378,24 @@ impl Interpreter {
 
     /// Procesa un token, ya sea ejecutándolo o agregándolo a una definición en curso.
     fn process_token(&mut self, token: &str) -> Result<(), String> {
+        if token == ".\"" && self.compiling.is_some() {
+            let literal = self.next_token()
+                .ok_or("Missing closing quote for .\"")?;
+            if let Some((_, ref mut words)) = self.compiling {
+                words.push(Rc::new(Word::StringLiteral(literal)));
+            }
+            return Ok(());
+        }
         let word = self.resolve_token(token)?;
-
+    
         if let Some((_, ref mut words)) = self.compiling {
             words.push(word);
         } else {
             self.run_word(&word)?;
         }
-
+    
         Ok(())
-    }
+    }    
 
     /// Resuelve un token, buscando en el diccionario o interpretándolo como un literal.
     fn resolve_token(&self, token: &str) -> Result<Rc<Word>, String> {
@@ -409,6 +417,10 @@ impl Interpreter {
             Word::Number(n) => self.run_number(*n),
             Word::Words(words) => self.run_words(words),
             Word::Builtin(op) => self.run_builtin(op),
+            Word::StringLiteral(s) => {
+                print!("{}", s);
+                Ok(())
+            }
         }
     }
 

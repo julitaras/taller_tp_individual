@@ -7,4 +7,5 @@ pub enum Word {
     Number(i16),
     Words(Vec<Rc<Word>>),
     Builtin(String),
+    StringLiteral(String),
 }
