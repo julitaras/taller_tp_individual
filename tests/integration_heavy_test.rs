@@ -35,8 +35,8 @@ fn test_do_not_clone() {
 : word67108864 word33554432 word33554432 ;
 : word134217728 word67108864 word67108864 ;
 "#,
-        "",   // No se espera salida en stdout.
-        &[],  // Se espera que el stack final esté vacío.
-        None, // Usamos el tamaño de pila por defecto.
+        "",
+        &[],
+        None,
     );
 }
