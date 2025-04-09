@@ -1,20 +1,11 @@
 //! Módulo para la implementación de un intérprete del lenguaje Forth.
-//!
-//! Este módulo proporciona la estructura `Interpreter`, que implementa un intérprete
-//! para el lenguaje Forth. El intérprete incluye un diccionario de words predefinidas,
-//! una pila para operaciones, y soporte para definir nuevas words y ejecutar código Forth.
 
 use crate::stack::Stack;
 use crate::word::Word;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-/// Representa el estado del intérprete.
-///
-/// El intérprete incluye una pila (`stack`), un diccionario de words (`dict`),
-/// y soporte para definir nuevas words (`compiling`). También mantiene un
-/// conjunto de tokens (`tokens`) y un índice de token actual (`token_index`) para
-/// procesar líneas de entrada.
+/// Estructura que representa el intérprete Forth.
 pub struct Interpreter {
     stack: Stack,
     dict: HashMap<String, Rc<Word>>,
@@ -26,7 +17,7 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    /// Crea un nuevo intérprete con una pila de tamaño especificado.
+    /// Crea un intérprete con la capacidad de una pila de tamaño especificado.
     pub fn new(stack_size: usize) -> Self {
         let mut interpreter = Self {
             stack: Stack::new(stack_size),
@@ -126,7 +117,7 @@ impl Interpreter {
             .insert(".\"".to_string(), Rc::new(Word::Builtin(".\"".to_string())));
     }
 
-    /// Convierte la pila en un vector para inspección.
+    /// Convierte el contenido de la pila en un vector.
     pub fn stack_to_vec(&self) -> Vec<i16> {
         self.stack.to_vec().to_vec()
     }
@@ -282,6 +273,7 @@ impl Interpreter {
         }
     }
 
+    /// Obtiene el siguiente token.
     fn next_token(&mut self) -> Option<String> {
         if self.token_index < self.tokens.len() {
             let token = self.tokens[self.token_index].clone();
@@ -292,6 +284,7 @@ impl Interpreter {
         }
     }
 
+    /// Divide la línea en tokens.
     fn tokenize(line: &str) -> Vec<String> {
         let mut tokens = Vec::new();
         let chars: Vec<char> = line.chars().collect();
@@ -368,6 +361,7 @@ impl Interpreter {
         Ok(())
     }
 
+    /// Finaliza la definición en curso y la agrega al diccionario.
     fn end_definition(&mut self) -> Result<(), String> {
         if let Some((name, words)) = self.compiling.take() {
             self.dict.insert(name, Rc::new(Word::Words(words)));
@@ -377,14 +371,12 @@ impl Interpreter {
         }
     }
 
-    /// Procesa un token, ya sea ejecutándolo o agregándolo a una definición en curso.
+    /// Procesa un token, ya sea ejecutándolo o compilándolo.
     fn process_token(&mut self, token: &str) -> Result<(), String> {
-        // Si estamos en modo compilación, revisar el token sin obtener mutable borrow de `words`
         if self.compiling.is_some() {
             let token_upper = token.to_uppercase();
             if token_upper == ".\"" {
                 let literal = self.next_token().ok_or("Missing closing quote for .\"")?;
-                // Se aplica trim_start() para eliminar espacios iniciales
                 let literal = literal.trim_start().to_owned();
                 if let Some((_, ref mut words)) = self.compiling {
                     words.push(Rc::new(Word::StringLiteral(literal)));
@@ -406,18 +398,15 @@ impl Interpreter {
         Ok(())
     }
 
-    /// Compila una estructura condicional que empieza en un token IF.
-    /// Esta función consume tokens hasta encontrar un ELSE o THEN que cierre la estructura.
+    /// Compila y procesa una estructura condicional comenzando con IF.
     fn compile_if(&mut self) -> Result<(), String> {
         let mut true_branch = Vec::new();
         let false_branch: Option<Vec<Rc<Word>>>;
 
-        // Compilar la rama "true"
         loop {
             let token = self.next_token().ok_or("Missing THEN for IF".to_string())?;
             match token.to_uppercase().as_str() {
                 "ELSE" => {
-                    // Al encontrar ELSE, compilar la rama false hasta THEN.
                     false_branch = Some(self.compile_until("THEN")?);
                     break;
                 }
@@ -426,11 +415,9 @@ impl Interpreter {
                     break;
                 }
                 "IF" => {
-                    // Si se encuentra un IF anidado, se compila de forma recursiva.
                     let nested_if = self.compile_if_internal()?;
                     true_branch.push(Rc::new(nested_if));
                 }
-                // Manejo especial para literales de cadena
                 ".\"" => {
                     let literal = self.next_token().ok_or("Missing closing quote for .\"")?;
                     let literal = literal.trim_start().to_owned();
@@ -438,7 +425,6 @@ impl Interpreter {
                 }
 
                 _ => {
-                    // Para cualquier otro token, resolver y agregar a la rama true.
                     let word = self.resolve_token(&token)?;
                     true_branch.push(word);
                 }
@@ -454,7 +440,7 @@ impl Interpreter {
         Ok(())
     }
 
-    /// Función auxiliar recursiva que compila un IF anidado y retorna el Word::If compilado.
+    /// Función auxiliar recursiva para compilar un IF anidado.
     fn compile_if_internal(&mut self) -> Result<Word, String> {
         let mut true_branch = Vec::new();
         let false_branch: Option<Vec<Rc<Word>>>;
@@ -495,7 +481,7 @@ impl Interpreter {
         })
     }
 
-    /// Compila tokens hasta encontrar el token objetivo (target) respetando IF anidados.
+    /// Compila tokens hasta encontrar el token objetivo respetando IF anidados.
     fn compile_until(&mut self, target: &str) -> Result<Vec<Rc<Word>>, String> {
         let mut words = Vec::new();
 
@@ -526,7 +512,7 @@ impl Interpreter {
         Ok(words)
     }
 
-    /// Resuelve un token, buscando en el diccionario o interpretándolo como un literal.
+    /// Resuelve un token buscando en el diccionario o interpretándolo como número.
     fn resolve_token(&self, token: &str) -> Result<Rc<Word>, String> {
         let token_upper = token.to_uppercase();
         if let Some(word) = self.dict.get(&token_upper) {
@@ -539,8 +525,6 @@ impl Interpreter {
     }
 
     /// Ejecuta un word en el contexto actual.
-    ///
-    /// Este método maneja words de tipo `Number`, `Words` y `Builtin`.
     fn run_word(&mut self, word: &Rc<Word>) -> Result<(), String> {
         match &**word {
             Word::Number(n) => self.run_number(*n),
