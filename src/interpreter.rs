@@ -284,6 +284,19 @@ impl Interpreter {
         }
     }
 
+    /// Lee un literal encerrado entre comillas a partir de la posición indicada.
+    fn read_quoted_literal(chars: &[char], i: &mut usize) -> String {
+        let start = *i;
+        while *i < chars.len() && chars[*i] != '"' {
+            *i += 1;
+        }
+        let literal: String = chars[start..*i].iter().collect();
+        if *i < chars.len() {
+            *i += 1;
+        }
+        literal
+    }
+
     /// Divide la línea en tokens.
     fn tokenize(line: &str) -> Vec<String> {
         let mut tokens = Vec::new();
@@ -298,17 +311,8 @@ impl Interpreter {
             if i + 1 < chars.len() && chars[i] == '.' && chars[i + 1] == '"' {
                 tokens.push(".\"".to_string());
                 i += 2;
-                let start = i;
-                while i < chars.len() && chars[i] != '"' {
-                    i += 1;
-                }
-                let literal: String = if i < chars.len() {
-                    chars[start..i].iter().collect()
-                } else {
-                    "".to_string()
-                };
+                let literal = Interpreter::read_quoted_literal(&chars, &mut i);
                 tokens.push(literal);
-                i += 1;
             } else {
                 let start = i;
                 while i < chars.len() && !chars[i].is_whitespace() {
