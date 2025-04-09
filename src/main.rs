@@ -60,7 +60,7 @@ fn read_file(filename: &str) -> Result<String, String> {
 
 /// Guarda el estado actual de la pila en un archivo.
 fn save_stack_to_file(interpreter: &Interpreter, filename: &str) -> Result<(), String> {
-    let stack_vec = interpreter.stack_to_vec(); // Obtener el estado de la pila como un vector.
+    let stack_vec = interpreter.stack_to_vec();
     let cwd = env::current_dir().map_err(|e| e.to_string())?;
     let file_path: PathBuf = cwd.join(filename);
     fs::write(

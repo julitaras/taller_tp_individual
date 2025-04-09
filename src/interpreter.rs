@@ -672,8 +672,8 @@ mod tests {
 
     #[test]
     fn test_limited_stack() {
-        let mut interpreter = Interpreter::new(2); // Pila con tamaño limitado
-        let result = interpreter.parse_line("1 2 3"); // Esto debería devolver "stack-overflow"
+        let mut interpreter = Interpreter::new(2);
+        let result = interpreter.parse_line("1 2 3");
         assert_eq!(result, Err("stack-overflow".to_string()));
     }
 }
