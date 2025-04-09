@@ -1,11 +1,11 @@
 : f
   dup 0 = if
-    drop 2
+    drop .\" zero\"
   else dup 1 = if
-    drop 3
-  else
-    drop 4
-  then then ;
-0 f
-1 f
-2 f
+    drop .\" one\"
+  else dup 2 = if
+    drop .\" two\"
+  then then then ;
+0 f cr
+1 f cr
+2 f cr
