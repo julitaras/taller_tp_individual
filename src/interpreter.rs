@@ -378,24 +378,152 @@ impl Interpreter {
 
     /// Procesa un token, ya sea ejecutándolo o agregándolo a una definición en curso.
     fn process_token(&mut self, token: &str) -> Result<(), String> {
-        if token == ".\"" && self.compiling.is_some() {
-            let literal = self.next_token()
-                .ok_or("Missing closing quote for .\"")?;
-            if let Some((_, ref mut words)) = self.compiling {
-                words.push(Rc::new(Word::StringLiteral(literal)));
+        // Si estamos en modo compilación, revisar el token sin obtener mutable borrow de `words`
+        if self.compiling.is_some() {
+            let token_upper = token.to_uppercase();
+            if token_upper == ".\"" {
+                let literal = self.next_token().ok_or("Missing closing quote for .\"")?;
+                // Se aplica trim_start() para eliminar espacios iniciales
+                let literal = literal.trim_start().to_owned();
+                if let Some((_, ref mut words)) = self.compiling {
+                    words.push(Rc::new(Word::StringLiteral(literal)));
+                }
+                return Ok(());
+            } else if token_upper == "IF" {
+                return self.compile_if();
+            } else if token_upper == "ELSE" || token_upper == "THEN" {
+                return Err("Unexpected token in definition".to_string());
             }
-            return Ok(());
         }
+
         let word = self.resolve_token(token)?;
-    
         if let Some((_, ref mut words)) = self.compiling {
             words.push(word);
         } else {
             self.run_word(&word)?;
         }
-    
         Ok(())
-    }    
+    }
+
+    /// Compila una estructura condicional que empieza en un token IF.
+    /// Esta función consume tokens hasta encontrar un ELSE o THEN que cierre la estructura.
+    fn compile_if(&mut self) -> Result<(), String> {
+        let mut true_branch = Vec::new();
+        let false_branch: Option<Vec<Rc<Word>>>;
+
+        // Compilar la rama "true"
+        loop {
+            let token = self.next_token().ok_or("Missing THEN for IF".to_string())?;
+            match token.to_uppercase().as_str() {
+                "ELSE" => {
+                    // Al encontrar ELSE, compilar la rama false hasta THEN.
+                    false_branch = Some(self.compile_until("THEN")?);
+                    break;
+                }
+                "THEN" => {
+                    false_branch = None;
+                    break;
+                }
+                "IF" => {
+                    // Si se encuentra un IF anidado, se compila de forma recursiva.
+                    let nested_if = self.compile_if_internal()?;
+                    true_branch.push(Rc::new(nested_if));
+                }
+                // Manejo especial para literales de cadena
+                ".\"" => {
+                    let literal = self.next_token().ok_or("Missing closing quote for .\"")?;
+                    let literal = literal.trim_start().to_owned();
+                    true_branch.push(Rc::new(Word::StringLiteral(literal)));
+                }
+
+                _ => {
+                    // Para cualquier otro token, resolver y agregar a la rama true.
+                    let word = self.resolve_token(&token)?;
+                    true_branch.push(word);
+                }
+            }
+        }
+
+        if let Some((_, ref mut words)) = self.compiling {
+            words.push(Rc::new(Word::If {
+                true_branch,
+                false_branch,
+            }));
+        }
+        Ok(())
+    }
+
+    /// Función auxiliar recursiva que compila un IF anidado y retorna el Word::If compilado.
+    fn compile_if_internal(&mut self) -> Result<Word, String> {
+        let mut true_branch = Vec::new();
+        let false_branch: Option<Vec<Rc<Word>>>;
+
+        loop {
+            let token = self
+                .next_token()
+                .ok_or("Missing THEN for nested IF".to_string())?;
+            match token.to_uppercase().as_str() {
+                "ELSE" => {
+                    false_branch = Some(self.compile_until("THEN")?);
+                    break;
+                }
+                "THEN" => {
+                    false_branch = None;
+                    break;
+                }
+                "IF" => {
+                    let nested = self.compile_if_internal()?;
+                    true_branch.push(Rc::new(nested));
+                }
+                ".\"" => {
+                    let literal = self.next_token().ok_or("Missing closing quote for .\"")?;
+                    let literal = literal.trim_start().to_owned();
+                    true_branch.push(Rc::new(Word::StringLiteral(literal)));
+                }
+
+                _ => {
+                    let word = self.resolve_token(&token)?;
+                    true_branch.push(word);
+                }
+            }
+        }
+
+        Ok(Word::If {
+            true_branch,
+            false_branch,
+        })
+    }
+
+    /// Compila tokens hasta encontrar el token objetivo (target) respetando IF anidados.
+    fn compile_until(&mut self, target: &str) -> Result<Vec<Rc<Word>>, String> {
+        let mut words = Vec::new();
+
+        loop {
+            let token = self
+                .next_token()
+                .ok_or(format!("Missing {} for IF", target))?;
+            if token.to_uppercase() == target.to_uppercase() {
+                break;
+            }
+            match token.to_uppercase().as_str() {
+                "IF" => {
+                    let nested = self.compile_if_internal()?;
+                    words.push(Rc::new(nested));
+                }
+                ".\"" => {
+                    let literal = self.next_token().ok_or("Missing closing quote for .\"")?;
+                    let literal = literal.trim_start().to_owned();
+                    words.push(Rc::new(Word::StringLiteral(literal)));
+                }
+
+                _ => {
+                    let word = self.resolve_token(&token)?;
+                    words.push(word);
+                }
+            }
+        }
+        Ok(words)
+    }
 
     /// Resuelve un token, buscando en el diccionario o interpretándolo como un literal.
     fn resolve_token(&self, token: &str) -> Result<Rc<Word>, String> {
@@ -419,6 +547,19 @@ impl Interpreter {
             Word::Builtin(op) => self.run_builtin(op),
             Word::StringLiteral(s) => {
                 print!("{}", s);
+                Ok(())
+            }
+            Word::If {
+                true_branch,
+                false_branch,
+            } => {
+                // Se evalúa la condición: se espera que previamente se haya dejado en la pila un valor
+                let cond = self.stack.pop()?;
+                if cond != 0 {
+                    self.run_words(true_branch)?;
+                } else if let Some(false_branch) = false_branch {
+                    self.run_words(false_branch)?;
+                }
                 Ok(())
             }
         }

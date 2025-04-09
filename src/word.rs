@@ -8,4 +8,8 @@ pub enum Word {
     Words(Vec<Rc<Word>>),
     Builtin(String),
     StringLiteral(String),
+    If {
+        true_branch: Vec<Rc<Word>>,
+        false_branch: Option<Vec<Rc<Word>>>,
+    },
 }
