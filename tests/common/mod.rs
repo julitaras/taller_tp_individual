@@ -63,8 +63,6 @@ pub fn run_binary_with_file(file_path: &PathBuf) -> String {
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
-/// Ejecuta el binario pasando el archivo de código (y opcionalmente el tamaño de la pila)
-/// y retorna la salida estándar.
 pub fn run_binary_with_file_and_stack_size(
     file_path: &PathBuf,
     stack_size: Option<usize>,
@@ -94,12 +92,6 @@ pub fn cleanup_temp_file(file_path: &PathBuf) {
     remove_file(file_path).expect("No se pudo borrar el archivo temporal");
 }
 
-/// Función auxiliar para ejecutar un caso de prueba:
-/// 1. Crea un archivo temporal con el código (code)
-/// 2. Ejecuta el binario
-/// 3. Lee el contenido del archivo "stack.fth" generado
-/// 4. Compara el contenido con el stack esperado
-/// 5. Realiza la limpieza de archivos.
 pub fn run_test_case(test_name: &str, code: &str, expected_stack: &[i16]) {
     let filename = format!("{}.fth", test_name.replace(' ', "_"));
     let temp_file = create_temp_file(&filename, code);
@@ -115,7 +107,6 @@ pub fn run_test_case(test_name: &str, code: &str, expected_stack: &[i16]) {
     remove_file("stack.fth").expect("No se pudo borrar stack.fth");
 }
 
-/// Función auxiliar para ejecutar un caso de prueba que verifica además la salida estándar.
 pub fn run_test_case_stdout(
     test_name: &str,
     code: &str,
