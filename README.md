@@ -12,7 +12,7 @@
 - Tener instalado [rust](https://doc.rust-lang.org/book/ch01-01-installation.html)
 - Crear un archivo `.fth` con las instrucciones que debe seguir el interprete. Por ejemplo ver: `test.fth`
 - Correr en el root del proyecto:
-    - Sin stack size `cargo run -- ej1.fth`
+    - Sin stack size `cargo run -- test.fth`
     - Con stack size `cargo run -- test.fth stack-size=30`
 
 ## Otros links
