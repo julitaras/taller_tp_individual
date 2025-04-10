@@ -405,35 +405,26 @@ impl Interpreter {
     /// Compila y procesa una estructura condicional comenzando con IF.
     fn compile_if(&mut self) -> Result<(), String> {
         let mut true_branch = Vec::new();
-        let false_branch: Option<Vec<Rc<Word>>>;
-
-        loop {
+        let false_branch = loop {
             let token = self.next_token().ok_or("Missing THEN for IF".to_string())?;
-            match token.to_uppercase().as_str() {
-                "ELSE" => {
-                    false_branch = Some(self.compile_until("THEN")?);
-                    break;
-                }
-                "THEN" => {
-                    false_branch = None;
-                    break;
-                }
-                "IF" => {
-                    let nested_if = self.compile_if_internal()?;
-                    true_branch.push(Rc::new(nested_if));
-                }
-                ".\"" => {
-                    let literal = self.next_token().ok_or("Missing closing quote for .\"")?;
-                    let literal = literal.trim_start().to_owned();
-                    true_branch.push(Rc::new(Word::StringLiteral(literal)));
-                }
-
-                _ => {
-                    let word = self.resolve_token(&token)?;
-                    true_branch.push(word);
-                }
+            let token_upper = token.to_uppercase();
+            if token_upper == "ELSE" {
+                break Some(self.compile_until("THEN")?);
+            } else if token_upper == "THEN" {
+                break None;
+            } else if token_upper == "IF" {
+                let nested_if = self.compile_if_internal()?;
+                true_branch.push(Rc::new(nested_if));
+            } else if token_upper == ".\"" {
+                let literal = self.next_token().ok_or("Missing closing quote for .\"")?;
+                true_branch.push(Rc::new(Word::StringLiteral(
+                    literal.trim_start().to_owned(),
+                )));
+            } else {
+                let word = self.resolve_token(&token)?;
+                true_branch.push(word);
             }
-        }
+        };
 
         if let Some((_, ref mut words)) = self.compiling {
             words.push(Rc::new(Word::If {
@@ -447,37 +438,29 @@ impl Interpreter {
     /// Función auxiliar recursiva para compilar un IF anidado.
     fn compile_if_internal(&mut self) -> Result<Word, String> {
         let mut true_branch = Vec::new();
-        let false_branch: Option<Vec<Rc<Word>>>;
-
-        loop {
+        let false_branch = loop {
             let token = self
                 .next_token()
                 .ok_or("Missing THEN for nested IF".to_string())?;
-            match token.to_uppercase().as_str() {
-                "ELSE" => {
-                    false_branch = Some(self.compile_until("THEN")?);
-                    break;
-                }
-                "THEN" => {
-                    false_branch = None;
-                    break;
-                }
-                "IF" => {
-                    let nested = self.compile_if_internal()?;
-                    true_branch.push(Rc::new(nested));
-                }
-                ".\"" => {
-                    let literal = self.next_token().ok_or("Missing closing quote for .\"")?;
-                    let literal = literal.trim_start().to_owned();
-                    true_branch.push(Rc::new(Word::StringLiteral(literal)));
-                }
+            let token_upper = token.to_uppercase();
 
-                _ => {
-                    let word = self.resolve_token(&token)?;
-                    true_branch.push(word);
-                }
+            if token_upper == "ELSE" {
+                break Some(self.compile_until("THEN")?);
+            } else if token_upper == "THEN" {
+                break None;
+            } else if token_upper == "IF" {
+                let nested = self.compile_if_internal()?;
+                true_branch.push(Rc::new(nested));
+            } else if token_upper == ".\"" {
+                let literal = self.next_token().ok_or("Missing closing quote for .\"")?;
+                true_branch.push(Rc::new(Word::StringLiteral(
+                    literal.trim_start().to_owned(),
+                )));
+            } else {
+                let word = self.resolve_token(&token)?;
+                true_branch.push(word);
             }
-        }
+        };
 
         Ok(Word::If {
             true_branch,
