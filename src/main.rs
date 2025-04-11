@@ -41,14 +41,21 @@ fn main() {
 fn parse_args() -> (String, usize) {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        eprintln!("Uso: {} archivo.fth [tamaño_stack]", args[0]);
+        eprintln!("Uso: {} archivo.fth [stack-size=N]", args[0]);
         std::process::exit(1);
     }
     let filename = args[1].to_owned();
-    let stack_size_in_bytes = args
-        .get(2)
-        .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(128 * 1024);
+
+    let stack_size_in_bytes = if let Some(param) = args.get(2) {
+        if let Some(num_str) = param.strip_prefix("stack-size=") {
+            num_str.parse::<usize>().unwrap_or(128 * 1024)
+        } else {
+            param.parse::<usize>().unwrap_or(128 * 1024)
+        }
+    } else {
+        128 * 1024
+    };
+
     let stack_size = stack_size_in_bytes / std::mem::size_of::<i16>();
     (filename, stack_size)
 }

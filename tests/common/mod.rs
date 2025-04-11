@@ -71,7 +71,7 @@ pub fn run_binary_with_file_and_stack_size(
     let mut cmd = Command::new(bin_path);
     cmd.arg(file_path);
     if let Some(size) = stack_size {
-        cmd.arg(format!("stack_size={}", size));
+        cmd.arg(format!("stack-size={}", size));
     }
     let output = cmd.output().expect("Fallo al ejecutar el comando");
     String::from_utf8_lossy(&output.stdout).to_string()
